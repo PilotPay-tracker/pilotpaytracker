@@ -1,0 +1,40 @@
+{
+  "cli": {
+    "version": "16.17.4"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "env": {
+        "BACKEND_URL": "https://royal-jewel.vibecode.run",
+        "EXPO_PUBLIC_VIBECODE_BACKEND_URL": "https://royal-jewel.vibecode.run",
+        "EXPO_PUBLIC_VIBECODE_REVENUECAT_TEST_KEY": "test_KbaPHeYyojOopyknvzYUTVWrwWM",
+        "EXPO_PUBLIC_VIBECODE_REVENUECAT_APPLE_KEY": "appl_MNCPSrHcIzJMLtHBGVfRiCxYQTf",
+        "EXPO_PUBLIC_VIBECODE_REVENUECAT_GOOGLE_KEY": "goog_wytGabXMUKEDnxJJwDLogvMqvxA",
+        "EXPO_PUBLIC_BACKEND_URL": "https://royal-jewel.vibecode.run"
+      },
+      "ios": {
+        "distribution": "store"
+      },
+      "android": {
+        "distribution": "store"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6757694445"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+diff --git a/dist/client.mjs b/dist/client.mjs
+index 5988797220ee85ea8ad1da362fa40ac13b7de49c..a672023bd74c8f9ca902943c242eb99aea98cc1b 100644
+--- a/dist/client.mjs
++++ b/dist/client.mjs
+@@ -47,7 +47,7 @@ var ExpoOnlineManager = class {
+ 		this.listeners.forEach((listener) => listener(online));
+ 	}
+ 	setup() {
+-		import("expo-network").then(({ addNetworkStateListener }) => {
++		Promise.resolve().then(() => { const { addNetworkStateListener } = require("expo-network"); return { addNetworkStateListener }; }).then(({ addNetworkStateListener }) => {
+ 			const subscription = addNetworkStateListener((state) => {
+ 				this.setOnline(!!state.isInternetReachable);
+ 			});

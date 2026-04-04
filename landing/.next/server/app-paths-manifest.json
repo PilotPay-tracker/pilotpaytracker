@@ -1,0 +1,16 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/cookie-debug/route": "app/api/cookie-debug/route.js",
+  "/login/page": "app/login/page.js",
+  "/signup/page": "app/signup/page.js",
+  "/subscribe/cancel/page": "app/subscribe/cancel/page.js",
+  "/subscribe/page": "app/subscribe/page.js",
+  "/page": "app/page.js",
+  "/subscribe/success/page": "app/subscribe/success/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
+  "/(app)/pay-summary/page": "app/(app)/pay-summary/page.js",
+  "/(app)/settings/page": "app/(app)/settings/page.js",
+  "/(app)/career/page": "app/(app)/career/page.js",
+  "/(app)/trips/page": "app/(app)/trips/page.js",
+  "/api/auth/[...all]/route": "app/api/auth/[...all]/route.js"
+}

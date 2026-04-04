@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  background-color: #080d19;
+  color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+}
+
+/* ── App root: full-height, safe for all browsers ── */
+.app-root {
+  /* Fallback for older browsers */
+  height: 100vh;
+  /* Dynamic viewport height: accounts for iOS Safari address bar */
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-main {
+  /* Fallback */
+  height: 100vh;
+  /* Dynamic viewport */
+  height: 100dvh;
+}
+
+/* ── Font utilities ── */
+.font-mono {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ── Scrollbar: WebKit (Chrome, Safari, Edge) ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e2d4a;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2e4070;
+}
+
+/* ── Scrollbar: Firefox ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e2d4a transparent;
+}
+
+/* ── Sidebar active indicator ── */
+.sidebar-active {
+  position: relative;
+}
+.sidebar-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 55%;
+  background: linear-gradient(180deg, #3b82f6, #60a5fa);
+  border-radius: 0 4px 4px 0;
+}
+
+/* ── Form inputs: consistent dark style ── */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+  color-scheme: dark;
+  /* Prevent iOS Safari from zooming in on focus (requires ≥16px) */
+  font-size: max(16px, 1em);
+}
+
+/* ── Touch: remove tap highlight on interactive elements ── */
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ── Touch momentum scrolling for overflow areas ── */
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto,
+main {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Table row hover transitions ── */
+tr:hover td {
+  transition: background 0.1s;
+}
+
+/* ── Prevent overscroll/pull-to-refresh on the main scrollable area ── */
+main {
+  overscroll-behavior-y: contain;
+}
+
+/* ── Cross-browser: ensure backdrop-filter fallback ── */
+@supports not (backdrop-filter: blur(1px)) {
+  .backdrop-blur-sm {
+    background-color: #080d19 !important;
+  }
+}
+
+/* ── Tablet/Mobile: larger minimum touch targets for interactive elements ── */
+@media (max-width: 1023px) {
+  /* Ensure buttons are at least 44px tall (Apple HIG) */
+  button:not(.no-min-touch) {
+    min-height: 44px;
+  }
+
+  /* Better tap targets for table rows */
+  tr td {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+/* ── Tablet-specific: slightly larger base text for readability ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  body {
+    font-size: 15px;
+  }
+}

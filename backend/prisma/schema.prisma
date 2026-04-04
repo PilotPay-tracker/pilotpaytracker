@@ -1,0 +1,2360 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id
+  email         String    @unique
+  name          String?
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  accounts      Account[]
+  passkeys      Passkey[]
+  Profile       Profile?
+  sessions      Session[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
+
+model Passkey {
+  id           String    @id
+  name         String?
+  publicKey    String
+  userId       String
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime? @default(now())
+  aaguid       String?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("passkey")
+}
+
+model Profile {
+  id                              String    @id @default(cuid())
+  userId                          String    @unique
+  firstName                       String?
+  lastName                        String?
+  gemsId                          String?
+  position                        String?
+  base                            String?
+  dateOfHire                      String?
+  dateOfBirth                     String?
+  hourlyRateCents                 Int       @default(32500)
+  airline                         String    @default("UPS")
+  onboardingComplete              Boolean   @default(false)
+  onboardingStep                  Int       @default(0)
+  aliasPackVersion                String?
+  operatorType                    String?
+  contractMappingStatus           String    @default("none")
+  payRuleDefaultsApplied          Boolean   @default(false)
+  calendarSyncConnected           Boolean   @default(false)
+  trialStatus                     String    @default("not_started")
+  trialStartDate                  DateTime?
+  trialEndDate                    DateTime?
+  subscriptionStatus              String    @default("inactive")
+  subscriptionStartDate           DateTime?
+  subscriptionEndDate             DateTime?
+  revenuecatCustomerId            String?
+  stripeCustomerId                String?
+  stripeSubscriptionId            String?
+  stripePriceId                   String?
+  currentPeriodEnd                DateTime?
+  plan                            String?
+  creditCapPeriodType             String    @default("BID_56")
+  creditCapAwardedLineCredit      Float     @default(0)
+  creditCapIsRDGLine              Boolean   @default(false)
+  creditCapAssignmentType         String    @default("DOMESTIC")
+  creditCapExclusionVacation      Float     @default(0)
+  creditCapExclusionTraining      Float     @default(0)
+  creditCapExclusionJuniorManning Float     @default(0)
+  creditCapExclusionCRAF          Float     @default(0)
+  creditCapExclusionSick          Float     @default(0)
+  creditCapAllowTripCompletion    Boolean   @default(false)
+  creditCapTripCompletionOvercap  Float     @default(0)
+  creditCapEnableVacationRelief   Boolean   @default(false)
+  creditCapDroppedTripsCredit     Float     @default(0)
+  creditCapHasVacationInPeriod    Boolean   @default(false)
+  payYear                         Int?
+  hourlyRateSource                String?
+  adminRole                       String    @default("user")
+  createdAt                       DateTime  @default(now())
+  updatedAt                       DateTime  @updatedAt
+  user                            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profile")
+}
+
+model AdminAuditLog {
+  id           String   @id @default(cuid())
+  adminEmail   String
+  adminUserId  String
+  targetEmail  String?
+  targetUserId String?
+  actionType   String
+  details      String?
+  createdAt    DateTime @default(now())
+
+  @@index([adminUserId])
+  @@index([targetUserId])
+  @@index([actionType])
+  @@index([createdAt])
+  @@map("admin_audit_log")
+}
+
+model ContractVersion {
+  id              String    @id @default(cuid())
+  versionName     String
+  effectiveDate   String
+  notes           String?
+  status          String    @default("draft")
+  publishedAt     DateTime?
+  publishedBy     String?
+  payTableData    String?
+  retirementRules String?
+  guaranteeRules  String?
+  reserveRules    String?
+  sickRules       String?
+  premiumRules    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([effectiveDate])
+  @@index([status])
+  @@map("contract_version")
+}
+
+model FlightEntry {
+  id                     String   @id @default(cuid())
+  userId                 String
+  dateISO                String
+  airline                String   @default("UPS")
+  flightNumber           String?
+  tailNumber             String?
+  origin                 String?
+  destination            String?
+  originName             String?
+  originCity             String?
+  destinationName        String?
+  destinationCity        String?
+  aircraftIcaoType       String?
+  aircraftModel          String?
+  blockMinutes           Int      @default(0)
+  flightMinutes          Int      @default(0)
+  creditMinutes          Int      @default(0)
+  outISO                 String?
+  offISO                 String?
+  onISO                  String?
+  inISO                  String?
+  payCode                String?
+  premiumCode            String?
+  premiumAmountCents     Int      @default(0)
+  hourlyRateCentsAtEntry Int      @default(0)
+  basePaoCents           Int      @default(0)
+  overageMinutes         Int      @default(0)
+  overagePaoCents        Int      @default(0)
+  totalPayCents          Int      @default(0)
+  notes                  String?
+  photos                 String?
+  flightAwareUrl         String?
+  tripId                 String?
+  dutyDayId              String?
+  legIndex               Int?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([userId])
+  @@index([dateISO])
+  @@index([tripId])
+  @@index([dutyDayId])
+  @@map("flight_entry")
+}
+
+model LogbookImport {
+  id                 String   @id @default(cuid())
+  userId             String
+  label              String
+  totalBlockMinutes  Int      @default(0)
+  totalFlightMinutes Int      @default(0)
+  totalFlights       Int      @default(0)
+  notes              String?
+  startDateISO       String?
+  endDateISO         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+  @@map("logbook_import")
+}
+
+model Trip {
+  id                       String             @id @default(cuid())
+  userId                   String
+  tripNumber               String?
+  pairingId                String?
+  matchKey                 String?
+  source                   String             @default("manual")
+  baseFleet                String?
+  startDate                String
+  endDate                  String
+  totalBlockMinutes        Int                @default(0)
+  totalCreditMinutes       Int                @default(0)
+  totalDutyMinutes         Int                @default(0)
+  totalPayCents            Int                @default(0)
+  legCount                 Int                @default(0)
+  dutyDaysCount            Int                @default(0)
+  totalTafbMinutes         Int                @default(0)
+  totalPdiemCents          Int                @default(0)
+  premiumCents             Int                @default(0)
+  status                   String             @default("scheduled")
+  needsReview              Boolean            @default(false)
+  originalRosterSnapshot   String?
+  originalSnapshotSetAt    DateTime?
+  currentRosterSnapshot    String?
+  currentSnapshotUpdatedAt DateTime?
+  protectedCreditMinutes   Int                @default(0)
+  currentCreditMinutes     Int                @default(0)
+  payCreditMinutes         Int                @default(0)
+  changeSummary            String?
+  changeSeverity           String             @default("none")
+  acknowledgmentRequired   Boolean            @default(false)
+  acknowledgedAt           DateTime?
+  lastUploadId             String?
+  premiumEventSuggestions  String?
+  activeVersionId          String?
+  pendingVersionId         String?
+  hasChangePending         Boolean            @default(false)
+  changePendingSince       DateTime?
+  tripActionType           String             @default("none")
+  pickupType               String             @default("none")
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  dutyDays                 DutyDay[]
+  logEvents                LogEvent[]
+  rosterChanges            RosterChange[]
+  tripDutyDays             TripDutyDay[]
+  events                   TripEvent[]
+  payProtection            TripPayProtection?
+  versions                 TripVersion[]
+  uploads                  Upload[]           @relation("TripToUpload")
+
+  @@unique([userId, pairingId])
+  @@unique([userId, matchKey])
+  @@unique([userId, startDate, tripNumber])
+  @@index([userId])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([pairingId])
+  @@index([matchKey])
+  @@index([userId, startDate, endDate])
+  @@index([userId, status])
+  @@index([hasChangePending])
+  @@index([lastUploadId])
+  @@map("trip")
+}
+
+model DutyDay {
+  id                   String    @id @default(cuid())
+  tripId               String
+  dutyDate             String
+  dutyStartISO         String?
+  dutyEndISO           String?
+  plannedCreditMinutes Int       @default(0)
+  actualBlockMinutes   Int       @default(0)
+  actualCreditMinutes  Int       @default(0)
+  minCreditMinutes     Int       @default(360)
+  finalCreditMinutes   Int       @default(0)
+  totalPayCents        Int       @default(0)
+  proofCount           Int       @default(0)
+  hasAllActuals        Boolean   @default(false)
+  hasPartialActuals    Boolean   @default(false)
+  hasScheduleChange    Boolean   @default(false)
+  scheduleChangeAt     DateTime?
+  scheduleChangeReason String?
+  scheduleChangeNotes  String?
+  originalData         String?
+  hasOverride          Boolean   @default(false)
+  overrideAt           DateTime?
+  overrideReason       String?
+  overridePersist      Boolean   @default(true)
+  premiumCode          String?
+  premiumCreditMinutes Int       @default(0)
+  premiumPayCents      Int       @default(0)
+  premiumAppliedAt     DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  trip                 Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  legs                 Leg[]
+
+  @@index([tripId])
+  @@index([dutyDate])
+  @@map("duty_day")
+}
+
+model Leg {
+  id                   String   @id @default(cuid())
+  dutyDayId            String
+  legIndex             Int      @default(0)
+  flightNumber         String?
+  origin               String?
+  destination          String?
+  equipment            String?
+  tailNumber           String?
+  isDeadhead           Boolean  @default(false)
+  scheduledOutISO      String?
+  scheduledInISO       String?
+  plannedBlockMinutes  Int      @default(0)
+  plannedCreditMinutes Int      @default(0)
+  actualOutISO         String?
+  actualOffISO         String?
+  actualOnISO          String?
+  actualInISO          String?
+  actualFlightMinutes  Int      @default(0)
+  actualBlockMinutes   Int      @default(0)
+  creditMinutes        Int      @default(0)
+  premiumCode          String?
+  premiumAmountCents   Int      @default(0)
+  calculatedPayCents   Int      @default(0)
+  source               String   @default("import")
+  ooiProofUri          String?
+  ooiProofTimestamp    String?
+  needsReview          Boolean  @default(false)
+  wasEdited            Boolean  @default(false)
+  editedAt             String?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  dutyDay              DutyDay  @relation(fields: [dutyDayId], references: [id], onDelete: Cascade)
+
+  @@index([dutyDayId])
+  @@map("leg")
+}
+
+model ScheduleBatch {
+  id         String          @id @default(cuid())
+  userId     String
+  sourceType String
+  importedAt DateTime        @default(now())
+  startDate  String
+  endDate    String
+  status     String          @default("pending")
+  confidence String          @default("provisional")
+  rawImages  String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  events     ScheduleEvent[]
+
+  @@index([userId])
+  @@map("schedule_batch")
+}
+
+model ScheduleEvent {
+  id               String        @id @default(cuid())
+  batchId          String
+  eventType        String
+  dateLocal        String
+  flightNumber     String?
+  dep              String?
+  arr              String?
+  equipment        String?
+  blockTimeMinutes Int?
+  isDeadhead       Boolean       @default(false)
+  isCommercial     Boolean       @default(false)
+  layoverMinutes   Int?
+  station          String?
+  hotelName        String?
+  hotelPhone       String?
+  transportPhone   String?
+  bookingStatus    String?
+  rawText          String?
+  confidence       Float         @default(0.8)
+  needsReview      Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  batch            ScheduleBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@index([dateLocal])
+  @@map("schedule_event")
+}
+
+model IROSegment {
+  id              String   @id @default(cuid())
+  userId          String
+  legId           String?
+  startISO        String
+  endISO          String?
+  durationMinutes Int      @default(0)
+  role            String
+  source          String   @default("manual")
+  edited          Boolean  @default(false)
+  editedAt        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([legId])
+  @@map("iro_segment")
+}
+
+model PayPeriod {
+  id           String @id @default(cuid())
+  year         Int
+  periodNumber Int
+  startDate    String
+  endDate      String
+  payDate      String
+  payType      String @default("standard")
+
+  @@unique([year, periodNumber])
+  @@map("pay_period")
+}
+
+model AircraftCache {
+  id         String   @id @default(cuid())
+  tailNumber String   @unique
+  icaoType   String?
+  model      String?
+  operator   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("aircraft_cache")
+}
+
+model AirportCache {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String?
+  city      String?
+  country   String?
+  latitude  Float?
+  longitude Float?
+  timezone  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("airport_cache")
+}
+
+model TripEvent {
+  id             String   @id @default(cuid())
+  tripId         String
+  dutyDayId      String?
+  eventType      String
+  startTimeLocal String?
+  endTimeLocal   String?
+  startTimeUtc   String?
+  endTimeUtc     String?
+  timezone       String?
+  depAirport     String?
+  arrAirport     String?
+  station        String?
+  flightMetadata String?
+  layoverMinutes Int?
+  hotelName      String?
+  hotelPhone     String?
+  hotelBooked    Boolean  @default(false)
+  hotelAddress   String?
+  transportNotes String?
+  transportPhone String?
+  creditMinutes  Int      @default(0)
+  rawCreditText  String?
+  minGuarantee   Boolean  @default(false)
+  sortOrder      Int      @default(0)
+  sourceType     String?
+  confidence     Float    @default(0.8)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  trip           Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([dutyDayId])
+  @@index([eventType])
+  @@map("trip_event")
+}
+
+model HotelProperty {
+  id             String                @id @default(cuid())
+  nameNormalized String
+  displayName    String
+  phone          String?
+  city           String?
+  airportCode    String?
+  address        String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  mappings       LayoverHotelMapping[]
+  transportNotes TransportNote[]
+
+  @@unique([nameNormalized, airportCode])
+  @@index([airportCode])
+  @@map("hotel_property")
+}
+
+model LayoverHotelMapping {
+  id              String        @id @default(cuid())
+  base            String
+  fleet           String?
+  layoverAirport  String
+  hotelPropertyId String
+  confidenceScore Float         @default(0.5)
+  evidenceCount   Int           @default(1)
+  lastSeenAt      DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  hotelProperty   HotelProperty @relation(fields: [hotelPropertyId], references: [id], onDelete: Cascade)
+
+  @@unique([base, fleet, layoverAirport])
+  @@index([layoverAirport])
+  @@index([confidenceScore])
+  @@map("layover_hotel_mapping")
+}
+
+model TransportNote {
+  id              String         @id @default(cuid())
+  base            String?
+  fleet           String?
+  layoverAirport  String
+  hotelPropertyId String?
+  noteText        String
+  phone           String?
+  confidenceScore Float          @default(0.5)
+  evidenceCount   Int            @default(1)
+  lastSeenAt      DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  hotelProperty   HotelProperty? @relation(fields: [hotelPropertyId], references: [id])
+
+  @@index([layoverAirport])
+  @@index([hotelPropertyId])
+  @@map("transport_note")
+}
+
+model TripDutyDay {
+  id                   String        @id @default(cuid())
+  tripId               String
+  dutyDayIndex         Int
+  dutyDate             String
+  reportTimeISO        String?
+  releaseTimeISO       String?
+  dutyMinutes          Int           @default(0)
+  blockMinutes         Int           @default(0)
+  creditMinutes        Int           @default(0)
+  restAfterMinutes     Int?
+  layoverStation       String?
+  hasScheduleChange    Boolean       @default(false)
+  scheduleChangeAt     DateTime?
+  scheduleChangeReason String?
+  scheduleChangeNotes  String?
+  originalData         String?
+  hasOverride          Boolean       @default(false)
+  overrideAt           DateTime?
+  overrideReason       String?
+  overridePersist      Boolean       @default(true)
+  premiumCode          String?
+  premiumCreditMinutes Int           @default(0)
+  premiumPayCents      Int           @default(0)
+  premiumAppliedAt     DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  trip                 Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  legs                 TripDutyLeg[]
+  layover              TripLayover?
+
+  @@unique([tripId, dutyDayIndex])
+  @@index([tripId])
+  @@index([dutyDate])
+  @@map("trip_duty_day")
+}
+
+model TripDutyLeg {
+  id                   String            @id @default(cuid())
+  tripDutyDayId        String
+  legIndex             Int
+  flightNumber         String?
+  origin               String?
+  destination          String?
+  equipment            String?
+  isDeadhead           Boolean           @default(false)
+  scheduledOutISO      String?
+  scheduledInISO       String?
+  actualOutISO         String?
+  actualOffISO         String?
+  actualOnISO          String?
+  actualInISO          String?
+  plannedBlockMinutes  Int               @default(0)
+  plannedCreditMinutes Int               @default(0)
+  actualBlockMinutes   Int               @default(0)
+  creditMinutes        Int               @default(0)
+  premiumCode          String?
+  premiumAmountCents   Int               @default(0)
+  legStatus            String            @default("FLY")
+  legCompleted         Boolean           @default(false)
+  legDateLocal         String?
+  timezone             String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  logEventLegs         LogEventLeg[]
+  sickCallLegLinks     SickCallLegLink[]
+  tripDutyDay          TripDutyDay       @relation(fields: [tripDutyDayId], references: [id], onDelete: Cascade)
+
+  @@unique([tripDutyDayId, legIndex])
+  @@index([tripDutyDayId])
+  @@index([legStatus])
+  @@map("trip_duty_leg")
+}
+
+model TripLayover {
+  id              String      @id @default(cuid())
+  tripDutyDayId   String      @unique
+  station         String
+  restMinutes     Int
+  hotelName       String?
+  hotelPhone      String?
+  hotelAddress    String?
+  hotelStatus     String?
+  hotelSource     String?
+  hotelConfidence Float       @default(0.0)
+  transportNotes  String?
+  transportPhone  String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  tripDutyDay     TripDutyDay @relation(fields: [tripDutyDayId], references: [id], onDelete: Cascade)
+
+  @@index([station])
+  @@map("trip_layover")
+}
+
+model UserHotelDirectory {
+  id              String   @id @default(cuid())
+  userId          String
+  airlineCode     String
+  station         String
+  baseCode        String?
+  equipmentCode   String?
+  hotelName       String
+  hotelPhone      String?
+  hotelAddress    String?
+  confirmCount    Int      @default(1)
+  rejectCount     Int      @default(0)
+  lastConfirmedAt DateTime @default(now())
+  lastSeenAt      DateTime @default(now())
+  isShared        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, airlineCode, station, hotelName])
+  @@index([userId])
+  @@index([airlineCode, station])
+  @@index([confirmCount])
+  @@map("user_hotel_directory")
+}
+
+model SharedHotelDirectory {
+  id              String   @id @default(cuid())
+  airlineCode     String
+  station         String
+  baseCode        String?
+  equipmentCode   String?
+  hotelName       String
+  hotelPhone      String?
+  hotelAddress    String?
+  confirmCount    Int      @default(1)
+  userCount       Int      @default(1)
+  lastConfirmedAt DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([airlineCode, station, hotelName])
+  @@index([airlineCode, station])
+  @@index([confirmCount])
+  @@map("shared_hotel_directory")
+}
+
+model ScheduleEvidence {
+  id              String   @id @default(cuid())
+  userId          String
+  tripId          String?
+  sourceType      String   @default("unknown")
+  imageUrl        String
+  parseStatus     String   @default("pending")
+  parseConfidence Float    @default(0.0)
+  rawOcrText      String   @default("")
+  parsedData      String   @default("{}")
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([tripId])
+  @@map("schedule_evidence")
+}
+
+model Upload {
+  id                  String               @id @default(cuid())
+  userId              String
+  sourceType          String
+  imageUrl            String
+  fileHash            String?
+  status              String               @default("pending")
+  errorMessage        String?
+  uploadedAt          DateTime             @default(now())
+  processedAt         DateTime?
+  parseResultJson     String               @default("{}")
+  parseConfidence     Float                @default(0.0)
+  tripsCreated        Int                  @default(0)
+  tripsUpdated        Int                  @default(0)
+  tripsSkipped        Int                  @default(0)
+  conflictsFound      Int                  @default(0)
+  warningCount        Int                  @default(0)
+  warningMessages     String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  logEventAttachments LogEventAttachment[]
+  trips               Trip[]               @relation("TripToUpload")
+
+  @@unique([userId, fileHash])
+  @@index([userId])
+  @@index([uploadedAt])
+  @@index([sourceType])
+  @@index([status])
+  @@map("upload")
+}
+
+model LogEvent {
+  id                  String               @id @default(cuid())
+  userId              String
+  tripId              String
+  eventType           String
+  premiumCode         String?
+  premiumMinutesDelta Int?
+  premiumMultiplier   Float?
+  notes               String?
+  autoGeneratedNotes  String?
+  status              String               @default("draft")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  changeSummaryJson   String?
+  appliesTo           String?
+  contractReference   String?
+  proofStatus         String?
+  applicationStatus   String?
+  eventDate           String?
+  isPayAffecting      Boolean              @default(false)
+  payDeltaCents       Int?
+  dutyDayDate         String?
+  aircraftType        String?
+  position            String?
+  trip                Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  attachments         LogEventAttachment[]
+  linkedLegs          LogEventLeg[]
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([eventType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([applicationStatus])
+  @@map("log_event")
+}
+
+model LogEventAttachment {
+  id             String   @id @default(cuid())
+  logEventId     String
+  uploadId       String?
+  attachmentUrl  String?
+  attachmentType String   @default("image")
+  description    String?
+  createdAt      DateTime @default(now())
+  upload         Upload?  @relation(fields: [uploadId], references: [id])
+  logEvent       LogEvent @relation(fields: [logEventId], references: [id], onDelete: Cascade)
+
+  @@index([logEventId])
+  @@index([uploadId])
+  @@map("log_event_attachment")
+}
+
+model LogEventLeg {
+  id            String      @id @default(cuid())
+  logEventId    String
+  tripDutyLegId String
+  isPrimaryLeg  Boolean     @default(false)
+  changeSummary String?
+  createdAt     DateTime    @default(now())
+  tripDutyLeg   TripDutyLeg @relation(fields: [tripDutyLegId], references: [id], onDelete: Cascade)
+  logEvent      LogEvent    @relation(fields: [logEventId], references: [id], onDelete: Cascade)
+
+  @@unique([logEventId, tripDutyLegId])
+  @@index([logEventId])
+  @@index([tripDutyLegId])
+  @@map("log_event_leg")
+}
+
+model PayRuleCategory {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  rules       PayRule[]
+
+  @@index([userId])
+  @@map("pay_rule_category")
+}
+
+model PayRule {
+  id                String               @id @default(cuid())
+  userId            String
+  categoryId        String?
+  name              String
+  code              String?
+  description       String?
+  ruleType          String
+  scope             String
+  rollingWindowDays Int?
+  valueConfig       String
+  conditions        String?
+  airlineLabels     String?
+  priority          Int                  @default(100)
+  isActive          Boolean              @default(true)
+  isBuiltIn         Boolean              @default(false)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  category          PayRuleCategory?     @relation(fields: [categoryId], references: [id])
+  applications      PayRuleApplication[]
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([ruleType])
+  @@index([code])
+  @@map("pay_rule")
+}
+
+model PayRuleApplication {
+  id                   String   @id @default(cuid())
+  userId               String
+  ruleId               String
+  tripId               String?
+  dutyDayId            String?
+  flightEntryId        String?
+  payPeriodStart       String?
+  appliedAt            DateTime @default(now())
+  originalValueMinutes Int?
+  originalValueCents   Int?
+  adjustedValueMinutes Int?
+  adjustedValueCents   Int?
+  adjustmentMinutes    Int?
+  adjustmentCents      Int?
+  explanation          String?
+  source               String   @default("auto")
+  createdAt            DateTime @default(now())
+  rule                 PayRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([ruleId])
+  @@index([tripId])
+  @@index([dutyDayId])
+  @@index([appliedAt])
+  @@map("pay_rule_application")
+}
+
+model PayEvent {
+  id                      String             @id @default(cuid())
+  userId                  String
+  eventType               String
+  airlineLabel            String?
+  eventDateISO            String
+  eventTimeISO            String?
+  tripId                  String?
+  dutyDayId               String?
+  title                   String
+  description             String?
+  originalTripNumber      String?
+  originalStartTime       String?
+  originalEndTime         String?
+  originalCreditMinutes   Int?
+  newTripNumber           String?
+  newStartTime            String?
+  newEndTime              String?
+  newCreditMinutes        Int?
+  creditDifferenceMinutes Int?
+  payDifferenceCents      Int?
+  triggeredRuleIds        String?
+  status                  String             @default("logged")
+  needsReview             Boolean            @default(false)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  premiumCode             String?
+  premiumMinutes          Int?
+  premiumVariantKey       String?
+  documentation           PayEventDocument[]
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([eventDateISO])
+  @@index([tripId])
+  @@index([userId, status])
+  @@index([userId, eventDateISO])
+  @@map("pay_event")
+}
+
+model PayEventDocument {
+  id                 String   @id @default(cuid())
+  payEventId         String
+  docType            String
+  contactName        String?
+  contactId          String?
+  contactPhone       String?
+  content            String?
+  attachmentUrl      String?
+  interactionTimeISO String?
+  createdAt          DateTime @default(now())
+  payEvent           PayEvent @relation(fields: [payEventId], references: [id], onDelete: Cascade)
+
+  @@index([payEventId])
+  @@map("pay_event_document")
+}
+
+model ScheduleSnapshot {
+  id                 String           @id @default(cuid())
+  userId             String
+  snapshotDate       String
+  sourceType         String
+  imageUrls          String
+  scheduleData       String
+  startDate          String
+  endDate            String
+  confidence         Float            @default(0.8)
+  parseStatus        String           @default("success")
+  tripCount          Int              @default(0)
+  legCount           Int              @default(0)
+  totalCreditMinutes Int              @default(0)
+  lastComparedAt     DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  changesDetected    ScheduleChange[]
+
+  @@index([userId])
+  @@index([snapshotDate])
+  @@index([createdAt])
+  @@map("schedule_snapshot")
+}
+
+model ScheduleChange {
+  id                    String           @id @default(cuid())
+  userId                String
+  oldSnapshotId         String?
+  newSnapshotId         String
+  changeType            String
+  severity              String           @default("info")
+  tripNumber            String?
+  tripDate              String?
+  legIndex              Int?
+  fieldChanged          String?
+  oldValue              String?
+  newValue              String?
+  creditDiffMinutes     Int              @default(0)
+  estimatedPayDiffCents Int              @default(0)
+  suggestedEventType    String?
+  suggestedEventTitle   String?
+  payEventId            String?
+  acknowledged          Boolean          @default(false)
+  acknowledgedAt        DateTime?
+  createdAt             DateTime         @default(now())
+  newSnapshot           ScheduleSnapshot @relation(fields: [newSnapshotId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([newSnapshotId])
+  @@index([tripNumber])
+  @@index([tripDate])
+  @@index([acknowledged])
+  @@map("schedule_change")
+}
+
+model ScheduleReminderSettings {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  enabled           Boolean   @default(true)
+  frequencyHours    Int       @default(48)
+  reminderTimes     String?
+  beforeReport      Boolean   @default(true)
+  beforeReportHours Int       @default(12)
+  lastImportAt      DateTime?
+  lastReminderAt    DateTime?
+  nextReminderAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("schedule_reminder_settings")
+}
+
+model ContractDocument {
+  id                   String                     @id @default(cuid())
+  userId               String
+  title                String
+  documentType         String
+  fileUrl              String
+  fileName             String
+  fileSize             Int
+  mimeType             String
+  parseStatus          String                     @default("pending")
+  rawText              String?
+  indexedSections      String?
+  parseError           String?
+  effectiveDate        String?
+  expirationDate       String?
+  airline              String?
+  summary              String?
+  versionLabel         String?
+  uploadSource         String                     @default("user")
+  disclaimerAcceptedAt DateTime?
+  isActive             Boolean                    @default(true)
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  referenceViews       ContractReferenceViewLog[]
+  sections             ContractSection[]
+
+  @@index([userId])
+  @@index([documentType])
+  @@index([isActive])
+  @@map("contract_document")
+}
+
+model ContractSection {
+  id             String                     @id @default(cuid())
+  documentId     String
+  sectionNumber  String?
+  heading        String
+  content        String
+  pageNumber     Int?
+  topics         String?
+  summary        String?
+  sortOrder      Int                        @default(0)
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  displayTitle   String?
+  excerptText    String?
+  pageEndNumber  Int?
+  referenceViews ContractReferenceViewLog[]
+  document       ContractDocument           @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([heading])
+  @@index([sectionNumber])
+  @@map("contract_section")
+}
+
+model ContractReference {
+  id              String    @id @default(cuid())
+  userId          String
+  triggerType     String
+  triggerEntityId String?
+  sectionId       String
+  documentId      String
+  relevanceScore  Float     @default(0.5)
+  snippet         String?
+  aiExplanation   String?
+  wasViewed       Boolean   @default(false)
+  viewedAt        DateTime?
+  wasDismissed    Boolean   @default(false)
+  wasHelpful      Boolean?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId])
+  @@index([triggerType])
+  @@index([sectionId])
+  @@index([documentId])
+  @@map("contract_reference")
+}
+
+model SavedContractReference {
+  id             String   @id @default(cuid())
+  userId         String
+  sectionId      String
+  documentId     String
+  documentTitle  String
+  sectionHeading String
+  sectionNumber  String?
+  pageNumber     Int?
+  excerpt        String
+  category       String?
+  userNotes      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, sectionId])
+  @@index([userId])
+  @@index([documentId])
+  @@index([category])
+  @@map("saved_contract_reference")
+}
+
+model ContractReferenceViewLog {
+  id                String           @id @default(cuid())
+  userId            String
+  documentId        String
+  sectionId         String?
+  viewSource        String           @default("manual")
+  relatedEntityType String?
+  relatedEntityId   String?
+  referenceCode     String?
+  pageNumber        Int?
+  viewedAt          DateTime         @default(now())
+  section           ContractSection? @relation(fields: [sectionId], references: [id])
+  document          ContractDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([sectionId])
+  @@index([viewedAt])
+  @@index([relatedEntityType])
+  @@map("contract_reference_view_log")
+}
+
+model ContractReferenceTrigger {
+  id             String   @id @default(cuid())
+  userId         String
+  triggerPattern String
+  documentId     String
+  sectionId      String
+  sectionNumber  String?
+  displayTitle   String?
+  conditions     String?
+  isActive       Boolean  @default(true)
+  isUserCreated  Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([triggerPattern])
+  @@index([documentId])
+  @@index([sectionId])
+  @@index([isActive])
+  @@map("contract_reference_trigger")
+}
+
+model ContractPatternDetection {
+  id                  String    @id @default(cuid())
+  userId              String
+  patternType         String
+  patternDescription  String
+  occurrenceCount     Int       @default(1)
+  firstOccurrence     DateTime
+  lastOccurrence      DateTime
+  rollingWindowMonths Int       @default(12)
+  relatedEntityIds    String?
+  isAcknowledged      Boolean   @default(false)
+  acknowledgedAt      DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([patternType])
+  @@index([lastOccurrence])
+  @@map("contract_pattern_detection")
+}
+
+model PayStatementUpload {
+  id                   String   @id @default(cuid())
+  userId               String
+  source               String
+  fileUrl              String
+  mimeType             String
+  status               String   @default("queued")
+  error                String?
+  parsedData           String?
+  extractedPeriodStart String?
+  extractedPeriodEnd   String?
+  extractedPayDate     String?
+  payPeriodId          String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([payPeriodId])
+  @@map("pay_statement_upload")
+}
+
+model StatementTemplate {
+  id                    String               @id @default(cuid())
+  userId                String
+  airlineId             String?
+  version               String               @default("v1")
+  sectionOrder          String
+  sectionHeaders        String
+  lineItemOrderingHints String?
+  normalizationRules    String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  projections           ProjectedStatement[]
+
+  @@index([userId])
+  @@map("statement_template")
+}
+
+model ActualStatement {
+  id          String   @id @default(cuid())
+  userId      String
+  payPeriodId String
+  parsedData  String
+  uploadId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, payPeriodId])
+  @@index([userId])
+  @@index([payPeriodId])
+  @@map("actual_statement")
+}
+
+model ProjectedStatement {
+  id              String            @id @default(cuid())
+  userId          String
+  payPeriodId     String
+  templateId      String
+  generatedAt     String
+  sectionsData    String
+  grossCents      Int               @default(0)
+  deductionsCents Int?
+  netCents        Int?
+  confidence      String            @default("medium")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  template        StatementTemplate @relation(fields: [templateId], references: [id])
+
+  @@index([userId])
+  @@index([payPeriodId])
+  @@index([templateId])
+  @@map("projected_statement")
+}
+
+model StatementDiff {
+  id          String   @id @default(cuid())
+  userId      String
+  payPeriodId String
+  comparedAt  String
+  reason      String
+  summaryLine String
+  changesData String
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([payPeriodId])
+  @@map("statement_diff")
+}
+
+model ReconciliationResult {
+  id                String   @id @default(cuid())
+  userId            String
+  payPeriodId       String
+  comparedAt        String
+  itemsData         String
+  matchedCount      Int      @default(0)
+  missingInAppCount Int      @default(0)
+  unmatchedCount    Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([payPeriodId])
+  @@map("reconciliation_result")
+}
+
+model PayAuditChecklist {
+  id             String   @id @default(cuid())
+  userId         String
+  payPeriodId    String
+  generatedAt    String
+  payHealthScore Int      @default(100)
+  checksData     String
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([payPeriodId])
+  @@map("pay_audit_checklist")
+}
+
+model ExportPacket {
+  id                       String   @id @default(cuid())
+  userId                   String
+  payPeriodId              String
+  status                   String   @default("queued")
+  error                    String?
+  downloadUrl              String?
+  filename                 String?
+  includeConfig            String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  contractReferencesFooter String?
+
+  @@index([userId])
+  @@index([payPeriodId])
+  @@map("export_packet")
+}
+
+model PayrollProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  paystubCount    Int      @default(0)
+  pretaxFlexCents Int      @default(0)
+  vebaCents       Int      @default(0)
+  excessLifeCents Int      @default(0)
+  ltdCents        Int      @default(0)
+  mutualAidCents  Int      @default(0)
+  unionDuesCents  Int      @default(0)
+  roth401kCents   Int      @default(0)
+  confidence      String   @default("none")
+  rawLearnedData  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("payroll_profile")
+}
+
+model CalendarConnection {
+  id               String                  @id @default(cuid())
+  userId           String
+  provider         String
+  displayName      String                  @default("My Calendar")
+  connectionStatus String                  @default("pending")
+  lastSyncAt       DateTime?
+  nextSyncAt       DateTime?
+  syncError        String?
+  icsUrl           String?
+  calendarId       String?
+  accessToken      String?
+  refreshToken     String?
+  tokenExpiresAt   DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  pendingChanges   CalendarPendingChange[]
+
+  @@index([userId])
+  @@index([provider])
+  @@index([connectionStatus])
+  @@map("calendar_connection")
+}
+
+model CalendarPendingChange {
+  id                    String             @id @default(cuid())
+  userId                String
+  connectionId          String
+  tripNumber            String?
+  tripDate              String
+  changeType            String
+  previousData          String?
+  newData               String?
+  fieldsChanged         String?
+  creditDiffMinutes     Int                @default(0)
+  estimatedPayDiffCents Int                @default(0)
+  status                String             @default("pending")
+  classificationReason  String?
+  appliedAt             DateTime?
+  payEventId            String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  connection            CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([connectionId])
+  @@index([status])
+  @@index([tripDate])
+  @@map("calendar_pending_change")
+}
+
+model UserCustomTerm {
+  id             String   @id @default(cuid())
+  userId         String
+  termKey        String
+  displayTerm    String
+  category       String
+  neutralSummary String
+  synonyms       String
+  tags           String?
+  airlineId      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, termKey])
+  @@index([userId])
+  @@index([airlineId])
+  @@map("user_custom_term")
+}
+
+model TripVersion {
+  id                  String   @id @default(cuid())
+  tripId              String
+  versionNumber       Int
+  isActiveVersion     Boolean  @default(false)
+  isBaselineVersion   Boolean  @default(false)
+  scheduleData        String
+  totalCreditMinutes  Int      @default(0)
+  totalBlockMinutes   Int      @default(0)
+  totalTafbMinutes    Int      @default(0)
+  dutyDaysCount       Int      @default(0)
+  legCount            Int      @default(0)
+  sourceType          String   @default("import")
+  sourceSnapshotId    String?
+  imageUrls           String?
+  parseConfidence     Float    @default(0.8)
+  lowConfidenceFields String?
+  createdAt           DateTime @default(now())
+  trip                Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, versionNumber])
+  @@index([tripId])
+  @@index([tripId, isActiveVersion])
+  @@index([createdAt])
+  @@map("trip_version")
+}
+
+model TripPayProtection {
+  id                     String    @id @default(cuid())
+  tripId                 String    @unique
+  protectedCreditMinutes Int       @default(0)
+  protectedSetAt         DateTime?
+  baselineVersionId      String?
+  currentCreditMinutes   Int       @default(0)
+  currentVersionId       String?
+  payCreditMinutes       Int       @default(0)
+  payCreditSource        String    @default("protected")
+  isPayProtected         Boolean   @default(false)
+  protectionAppliedAt    DateTime?
+  creditDeltaMinutes     Int       @default(0)
+  estimatedDeltaCents    Int       @default(0)
+  lastEvaluatedAt        DateTime  @default(now())
+  evaluationCount        Int       @default(0)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  trip                   Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([isPayProtected])
+  @@map("trip_pay_protection")
+}
+
+model RosterChange {
+  id                    String    @id @default(cuid())
+  userId                String
+  tripId                String
+  oldVersionId          String?
+  newVersionId          String
+  changeType            String
+  severity              String
+  fieldChanged          String?
+  oldValue              String?
+  newValue              String?
+  affectedDays          String?
+  affectedLegs          String?
+  changeSummary         String
+  creditDiffMinutes     Int       @default(0)
+  estimatedPayDiffCents Int       @default(0)
+  isPremiumCandidate    Boolean   @default(false)
+  premiumCandidateType  String?
+  premiumConfidence     String?
+  requiresAck           Boolean   @default(false)
+  acknowledged          Boolean   @default(false)
+  acknowledgedAt        DateTime?
+  acknowledgedBy        String?
+  logEventId            String?
+  logEventStatus        String?
+  recordId              String?
+  createdAt             DateTime  @default(now())
+  trip                  Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([severity])
+  @@index([requiresAck, acknowledged])
+  @@index([createdAt])
+  @@map("roster_change")
+}
+
+model AuditRecord {
+  id             String   @id @default(cuid())
+  userId         String
+  recordType     String
+  tripId         String?
+  tripVersionId  String?
+  rosterChangeId String?
+  logEventId     String?
+  title          String
+  summary        String
+  severity       String?
+  creditContext  String?
+  payContext     String?
+  linkedEvidence String?
+  metadata       String?
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([recordType])
+  @@index([tripId])
+  @@index([createdAt])
+  @@map("audit_record")
+}
+
+model LapEntry {
+  id                      String               @id @default(cuid())
+  userId                  String
+  tripId                  String
+  tripNumber              String?
+  tripDate                String
+  originalArrivalUtc      String?
+  actualArrivalUtc        String?
+  dutyStartUtc            String?
+  dutyEndUtc              String?
+  isWxMx                  Boolean              @default(false)
+  isEdw                   Boolean              @default(false)
+  isDomicileAirportClosed Boolean              @default(false)
+  lapStartTimeUtc         String?
+  lateMinutes             Int                  @default(0)
+  legMinutesAfterLap      Int                  @default(0)
+  dutyMinutesAfterLap     Int                  @default(0)
+  tripRigCredit           Int                  @default(0)
+  dutyRigCredit           Int                  @default(0)
+  legCredit               Int                  @default(0)
+  chosenBasis             String?
+  chosenCreditMinutes     Int                  @default(0)
+  hourlyRateCents         Int                  @default(0)
+  estimatedPayCents       Int                  @default(0)
+  confidenceLevel         String               @default("red")
+  confidenceReason        String?
+  explanationText         String?
+  explanationPolished     String?
+  grievancePdfUrl         String?
+  grievancePdfGeneratedAt String?
+  pilotNotes              String?
+  status                  String               @default("draft")
+  needsReview             Boolean              @default(true)
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  proofAttachments        LapProofAttachment[]
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([tripDate])
+  @@index([status])
+  @@map("lap_entry")
+}
+
+model LapProofAttachment {
+  id          String   @id @default(cuid())
+  lapEntryId  String
+  fileName    String
+  fileUrl     String
+  mimeType    String
+  fileSize    Int      @default(0)
+  uploadedAt  DateTime @default(now())
+  description String?
+  lapEntry    LapEntry @relation(fields: [lapEntryId], references: [id], onDelete: Cascade)
+
+  @@index([lapEntryId])
+  @@map("lap_proof_attachment")
+}
+
+model TaxProfile {
+  id                       String   @id @default(cuid())
+  userId                   String   @unique
+  stateOfResidence         String   @default("TX")
+  filingStatus             String   @default("single")
+  payFrequency             String   @default("biweekly")
+  dependents               Int      @default(0)
+  additionalCredits        Int      @default(0)
+  extraWithholdingType     String   @default("fixed")
+  extraWithholdingValue    Int      @default(0)
+  stateWithholdingOverride Int?
+  taxYear                  Int      @default(2024)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("tax_profile")
+}
+
+model Deduction {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  deductionType String   @default("fixed")
+  amount        Int      @default(0)
+  timing        String   @default("pretax")
+  frequency     String   @default("per_paycheck")
+  isEnabled     Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@map("deduction")
+}
+
+model PayBenchmark {
+  id                  String   @id @default(cuid())
+  airline             String
+  effectiveDate       String
+  seat                String
+  yearOfService       Int
+  hourlyRateCents     Int
+  payAtGuaranteeCents Int
+  avgLinePayCents     Int
+  avgTotalPayCents    Int
+  sourceNote          String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([airline, effectiveDate, seat, yearOfService])
+  @@index([airline])
+  @@index([effectiveDate])
+  @@index([seat])
+  @@map("pay_benchmark")
+}
+
+model LifetimeEarningsYear {
+  id                 String   @id @default(cuid())
+  userId             String
+  year               Int
+  grossEarningsCents Int
+  source             String   @default("user")
+  isFinalized        Boolean  @default(false)
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([userId, year])
+  @@index([userId])
+  @@index([year])
+  @@map("lifetime_earnings_year")
+}
+
+model LifetimeEarningsConfig {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  airline         String
+  startYear       Int?
+  priorYearsAdded Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("lifetime_earnings_config")
+}
+
+model PayAudit {
+  id                   String   @id @default(cuid())
+  userId               String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Pay period context
+  payPeriodStart       String?
+  payPeriodEnd         String?
+
+  // Parsed Flight Register fields
+  frPayPeriodStart     String?
+  frPayPeriodEnd       String?
+  frBeginningPayCredit String?
+  frEndingPayCredit    String?
+  frDutyDays           Int?
+  frJaHours            String?
+  frJa2Hours           String?
+  frBlockHoursPaid     String?
+  frTdyPerDiem         Float?
+  frRawData            String?
+
+  // Parsed Dayforce fields
+  dfPayPeriodStart     String?
+  dfPayPeriodEnd       String?
+  dfPayRate            Float?
+  dfAdvNextPay         Float?
+  dfOverGuaranteeHours Float?
+  dfOverGuaranteeAmt   Float?
+  dfUnderGuarantee     Float?
+  dfJuniorHours        Float?
+  dfJuniorAmount       Float?
+  dfPremiumPayHours    Float?
+  dfPremiumPayAmount   Float?
+  dfDomicilePdmTx      Float?
+  dfDmsticPdmTx        Float?
+  dfVacationHours      Float?
+  dfVacationAmount     Float?
+  dfGrossPay           Float?
+  dfNetPay             Float?
+  dfRawData            String?
+
+  // Audit result
+  matchScore           Int?
+  matchStatus          String?
+  estimatedDifference  Float?
+  jaHourDifference     Float?
+  jaExpectedPay        Float?
+  jaActualPay          Float?
+  summary              String?
+  findings             String?  // JSON array of strings
+
+  // App data snapshot used
+  appPayRate           Float?
+  appPosition          String?
+  appBase              String?
+
+  // v3 FR-only audit fields (stored for historical retrieval)
+  expectedGrossCents        Int?
+  estimatedNetCents         Int?
+  enteredSettlementCents    Int?
+  enteredAdvanceCents       Int?
+  auditDifferenceCents      Int?
+  auditStatus               String?
+  auditSummary              String?
+  comparisonMode            String?
+  matchedSettlementPeriod   String?
+  matchedAdvancePeriod      String?
+  matchedSettlementPayDate  String?
+  matchedAdvancePayDate     String?
+  expectedGrossBreakdown    String?  // JSON
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("pay_audit")
+}
+
+model IssueReport {
+  id          String   @id @default(cuid())
+  userId      String
+  category    String
+  description String
+  deviceInfo  String?
+  appVersion  String?
+  status      String   @default("open")
+  adminNotes  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("issue_report")
+}
+
+model PremiumCode {
+  id                 String   @id @default(cuid())
+  code               String   @unique
+  title              String   @default("")
+  description        String?
+  category           String   @default("other")
+  premiumType        String
+  premiumMinutes     Int?
+  premiumMultiplier  Float?
+  eligibility        String?
+  tripType           String?
+  contractRef        String?
+  notes              String?
+  variantsJson       String?
+  hasVariants        Boolean  @default(false)
+  requiresInputsJson String?
+  applicableContext  String?
+  triggerKeywords    String?
+  name               String?
+  eligibilityText    String?
+  variantDescription String?
+  variantMinutes     Int?
+  isActive           Boolean  @default(true)
+  autoConnect        Boolean  @default(false)
+  sortOrder          Int      @default(100)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([code])
+  @@index([category])
+  @@index([premiumType])
+  @@index([isActive])
+  @@map("premium_code")
+}
+
+model PremiumEventSuggestion {
+  id                  String    @id @default(cuid())
+  userId              String
+  tripId              String
+  rosterChangeId      String?
+  premiumCodeId       String?
+  premiumCode         String
+  premiumName         String
+  autoGeneratedNotes  String?
+  detectedReason      String?
+  suggestedMinutes    Int?
+  suggestedMultiplier Float?
+  estimatedPayImpact  Int?
+  confidence          String    @default("medium")
+  status              String    @default("pending")
+  dismissedReason     String?
+  acceptedAt          DateTime?
+  dismissedAt         DateTime?
+  logEventId          String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([status])
+  @@index([premiumCode])
+  @@map("premium_event_suggestion")
+}
+
+model UserNotificationSettings {
+  id                        String    @id @default(cuid())
+  userId                    String    @unique
+  pushPermissionGranted     Boolean   @default(false)
+  pushPermissionAskedAt     DateTime?
+  expoPushToken             String?
+  reportTimeReminderEnabled Boolean   @default(true)
+  reportTimeLeadMinutes     Int       @default(60)
+  payPeriodEndingEnabled    Boolean   @default(true)
+  payPeriodEndingHours48    Boolean   @default(true)
+  payPeriodEndingHours24    Boolean   @default(false)
+  paydayReminderEnabled     Boolean   @default(true)
+  paydayReminder2DaysBefore Boolean   @default(false)
+  paydayReminder1DayBefore  Boolean   @default(true)
+  paydayReminderMorningOf   Boolean   @default(true)
+  arrivalWelcomeEnabled     Boolean   @default(true)
+  arrivalHighConfidenceOnly Boolean   @default(true)
+  payStatementReadyEnabled  Boolean   @default(true)
+  quietHoursEnabled         Boolean   @default(false)
+  quietHoursStart           String    @default("22:00")
+  quietHoursEnd             String    @default("07:00")
+  quietHoursAction          String    @default("delay")
+  highConfidenceOnly        Boolean   @default(true)
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@map("user_notification_settings")
+}
+
+model ScheduledNotification {
+  id                 String    @id @default(cuid())
+  userId             String
+  notificationType   String
+  scheduledFor       DateTime
+  expoNotificationId String?
+  tripId             String?
+  dutyDayId          String?
+  payPeriodId        String?
+  title              String
+  body               String
+  data               String?
+  status             String    @default("scheduled")
+  sentAt             DateTime?
+  failedReason       String?
+  isInternational    Boolean   @default(false)
+  confidence         String    @default("high")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([scheduledFor])
+  @@index([status])
+  @@index([notificationType])
+  @@index([tripId])
+  @@map("scheduled_notification")
+}
+
+model Referral {
+  id                  String    @id @default(cuid())
+  referrerId          String
+  referrerCode        String    @unique
+  referredUserId      String?   @unique
+  referredEmail       String?
+  status              String    @default("pending")
+  discountPercent     Int       @default(50)
+  referrerRewardType  String    @default("credit")
+  referrerRewardValue Int       @default(0)
+  codeCreatedAt       DateTime  @default(now())
+  signedUpAt          DateTime?
+  subscribedAt        DateTime?
+  rewardAppliedAt     DateTime?
+  expiresAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([referrerId])
+  @@index([referrerCode])
+  @@index([referredUserId])
+  @@index([status])
+  @@map("referral")
+}
+
+model ReferralStats {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  totalReferrals      Int      @default(0)
+  successfulReferrals Int      @default(0)
+  pendingReferrals    Int      @default(0)
+  totalRewardsCents   Int      @default(0)
+  freeMonthsEarned    Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("referral_stats")
+}
+
+model UploadJob {
+  id                String    @id @default(cuid())
+  userId            String
+  status            String    @default("pending")
+  imageUrls         String
+  imageCount        Int       @default(1)
+  progress          Int       @default(0)
+  currentStep       String?
+  createdTripIds    String?
+  updatedTripIds    String?
+  errorMessage      String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  processingTimeMs  Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  conflictsDetected String?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("upload_job")
+}
+
+model AIParsingFeedback {
+  id             String   @id @default(cuid())
+  userId         String
+  entityType     String
+  entityId       String
+  fieldName      String
+  originalValue  String?
+  aiConfidence   Float?
+  correctedValue String?
+  sourceType     String?
+  imageHash      String?
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, fieldName])
+  @@index([aiConfidence])
+  @@map("ai_parsing_feedback")
+}
+
+model SuggestionOutcome {
+  id             String    @id @default(cuid())
+  userId         String
+  suggestionType String
+  suggestionId   String
+  action         String
+  dismissReason  String?
+  dismissNotes   String?
+  wasAccurate    Boolean?
+  outcomeNotes   String?
+  validatedAt    DateTime?
+  aiConfidence   Float?
+  userConfidence Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([suggestionType])
+  @@index([action])
+  @@map("suggestion_outcome")
+}
+
+model ExplanationFeedback {
+  id              String   @id @default(cuid())
+  userId          String
+  explanationType String
+  entityId        String
+  wasHelpful      Boolean
+  clarityRating   Int?
+  feedbackText    String?
+  confusingParts  String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([explanationType])
+  @@index([wasHelpful])
+  @@map("explanation_feedback")
+}
+
+model AILearningMetrics {
+  id              String   @id @default(cuid())
+  metricType      String
+  category        String
+  totalCount      Int      @default(0)
+  successCount    Int      @default(0)
+  successRate     Float    @default(0)
+  avgConfidence   Float?
+  periodStart     DateTime
+  periodEnd       DateTime
+  topIssues       String?
+  recommendations String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([metricType, category, periodStart])
+  @@index([metricType])
+  @@map("ai_learning_metrics")
+}
+
+model SickCallEvent {
+  id                String            @id @default(cuid())
+  userId            String
+  tripId            String
+  sickCallGroupId   String            @unique @default(cuid())
+  scope             String            @default("legs")
+  startDateLocal    String?
+  endDateLocal      String?
+  sickCreditMinutes Int               @default(0)
+  sickDaysCount     Int               @default(0)
+  autoNotes         String?
+  userNotes         String?
+  status            String            @default("active")
+  voidedAt          DateTime?
+  voidedReason      String?
+  logEventId        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  linkedLegs        SickCallLegLink[]
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([sickCallGroupId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("sick_call_event")
+}
+
+model SickCallLegLink {
+  id               String        @id @default(cuid())
+  sickCallEventId  String
+  tripDutyLegId    String
+  legCreditMinutes Int           @default(0)
+  legDateLocal     String?
+  createdAt        DateTime      @default(now())
+  tripDutyLeg      TripDutyLeg   @relation(fields: [tripDutyLegId], references: [id], onDelete: Cascade)
+  sickCallEvent    SickCallEvent @relation(fields: [sickCallEventId], references: [id], onDelete: Cascade)
+
+  @@unique([sickCallEventId, tripDutyLegId])
+  @@index([sickCallEventId])
+  @@index([tripDutyLegId])
+  @@index([legDateLocal])
+  @@map("sick_call_leg_link")
+}
+
+model SickBank {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  balanceHours            Float    @default(0)
+  capHours                Float    @default(1200)
+  capReached              Boolean  @default(false)
+  accrualRateHours        Float    @default(5.5)
+  hourlyRateCentsOverride Int?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("sick_bank")
+}
+
+model SickAccrualLog {
+  id            String   @id @default(cuid())
+  userId        String
+  periodMonth   String
+  accruedHours  Float    @default(0)
+  ytdTotalHours Float    @default(0)
+  balanceAfter  Float    @default(0)
+  blockedByCap  Boolean  @default(false)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, periodMonth])
+  @@index([userId])
+  @@index([periodMonth])
+  @@map("sick_accrual_log")
+}
+
+model SickUsageLog {
+  id               String                @id @default(cuid())
+  userId           String
+  startDate        String
+  endDate          String
+  hoursUsed        Float                 @default(0)
+  tripId           String?
+  tripNumber       String?
+  coverageStatus   String                @default("FULL")
+  balanceBefore    Float                 @default(0)
+  balanceAfter     Float                 @default(0)
+  continuousCallId String?
+  userNotes        String?
+  autoSummary      String?
+  status           String                @default("active")
+  voidedAt         DateTime?
+  voidedReason     String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  attachments      SickUsageAttachment[]
+
+  @@index([userId])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([continuousCallId])
+  @@index([status])
+  @@map("sick_usage_log")
+}
+
+model SickUsageAttachment {
+  id          String       @id @default(cuid())
+  sickUsageId String
+  fileName    String
+  fileUrl     String
+  mimeType    String
+  fileSize    Int          @default(0)
+  description String?
+  uploadedAt  DateTime     @default(now())
+  sickUsage   SickUsageLog @relation(fields: [sickUsageId], references: [id], onDelete: Cascade)
+
+  @@index([sickUsageId])
+  @@map("sick_usage_attachment")
+}
+
+model ReserveScheduleEvent {
+  id                   String            @id @default(cuid())
+  userId               String
+  scheduleType         String
+  domicile             String
+  startDtLocal         String
+  endDtLocal           String
+  windowStartLocal     String?
+  windowEndLocal       String?
+  reportForDutyMinutes Int?
+  creditHours          Float             @default(0)
+  blockHours           Float             @default(0)
+  creditLocked         Boolean           @default(false)
+  activationStatus     String            @default("UNACTIVATED")
+  tripId               String?
+  sourceUploadId       String?
+  notes                String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  activationLegs       ActivationLeg[]
+  logEvents            ReserveLogEvent[]
+
+  @@unique([userId, scheduleType, startDtLocal])
+  @@index([userId])
+  @@index([scheduleType])
+  @@index([domicile])
+  @@index([startDtLocal])
+  @@index([endDtLocal])
+  @@index([activationStatus])
+  @@index([creditLocked])
+  @@map("reserve_schedule_event")
+}
+
+model ActivationLeg {
+  id                     String               @id @default(cuid())
+  reserveScheduleEventId String
+  flightNumber           String?
+  origin                 String
+  destination            String
+  depDtLocal             String
+  arrDtLocal             String
+  blockMinutes           Int                  @default(0)
+  actualOutISO           String?
+  actualOffISO           String?
+  actualOnISO            String?
+  actualInISO            String?
+  equipment              String?
+  tailNumber             String?
+  isDeadhead             Boolean              @default(false)
+  legIndex               Int                  @default(0)
+  sourceUploadId         String?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  reserveScheduleEvent   ReserveScheduleEvent @relation(fields: [reserveScheduleEventId], references: [id], onDelete: Cascade)
+
+  @@index([reserveScheduleEventId])
+  @@index([depDtLocal])
+  @@map("activation_leg")
+}
+
+model ReserveLogEvent {
+  id                     String               @id @default(cuid())
+  userId                 String
+  reserveScheduleEventId String
+  eventType              String
+  notes                  String?
+  autoGeneratedNotes     String?
+  status                 String               @default("saved")
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  reserveScheduleEvent   ReserveScheduleEvent @relation(fields: [reserveScheduleEventId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([reserveScheduleEventId])
+  @@index([eventType])
+  @@map("reserve_log_event")
+}
+
+model ReserveWindowConfig {
+  id           String   @id @default(cuid())
+  domicile     String
+  scheduleType String
+  windowStart  String
+  windowEnd    String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([domicile, scheduleType])
+  @@index([domicile])
+  @@index([scheduleType])
+  @@map("reserve_window_config")
+}
+
+model CreditLockAuditLog {
+  id                     String   @id @default(cuid())
+  userId                 String
+  reserveScheduleEventId String
+  attemptedCreditHours   Float
+  originalCreditHours    Float
+  actionTaken            String   @default("BLOCKED")
+  reason                 String?
+  createdAt              DateTime @default(now())
+
+  @@index([userId])
+  @@index([reserveScheduleEventId])
+  @@index([createdAt])
+  @@map("credit_lock_audit_log")
+}
+
+model SavedPlannerScenario {
+  id                      String   @id @default(cuid())
+  userId                  String
+  scenarioName            String
+  targetAnnualIncomeCents Int
+  scenarioType            String
+  settingsJson            String
+  projectedAnnualPayCents Int
+  feasibilityRating       String
+  savedAt                 DateTime @default(now())
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([savedAt])
+  @@map("saved_planner_scenario")
+}
+
+model YearPlan {
+  id                      String   @id @default(cuid())
+  userId                  String
+  planYear                Int
+  targetAnnualIncomeCents Int
+  hourlyRateCents         Int      @default(32500)
+  monthlyGuaranteeHours   Float    @default(75)
+  jaMultiplier            Float    @default(1.5)
+  includeJA               Boolean  @default(false)
+  includeOpenTime         Boolean  @default(true)
+  planningMode            String   @default("BALANCED")
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@unique([userId, planYear, isActive])
+  @@index([userId])
+  @@index([planYear])
+  @@index([isActive])
+  @@map("year_plan")
+}
+
+// ============================================
+// BidPeriodBaseline — Originally awarded line credit per bid period.
+// Stores the credit the pilot was AWARDED at bid time so the pay engine
+// can correctly interpret pickups (filling guarantee gap vs. generating
+// extra pay), drop effects, and guarantee applicability.
+// ============================================
+model BidPeriodBaseline {
+  id                   String   @id @default(cuid())
+  userId               String
+  // Unique key for the period, e.g. "2026-P03" (year + UPS period number)
+  periodKey            String
+  periodStartISO       String
+  periodEndISO         String
+  // The credit the pilot was originally awarded for this bid period (minutes)
+  awardedCreditMinutes Int      @default(0)
+  // Source of the baseline: "uploaded_award" | "manual_entry" | "estimated"
+  source               String   @default("manual_entry")
+  // Human-readable note about the source (e.g. "Uploaded award screenshot")
+  sourceNote           String?
+  // Optional link to upload record if source = "uploaded_award"
+  uploadId             String?
+  // Confidence level: "high" (uploaded + parsed) | "medium" (manual) | "low" (estimated)
+  confidence           String   @default("medium")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([userId, periodKey])
+  @@index([userId])
+  @@index([periodKey])
+  @@map("bid_period_baseline")
+}

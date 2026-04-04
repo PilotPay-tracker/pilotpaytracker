@@ -1,0 +1,45 @@
+{
+  "name": "server",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "NODE_ENV=development bun run --hot src/index.ts",
+    "build": "bun install && NODE_ENV=production bun build src/index.ts --outdir dist --target bun",
+    "start": "NODE_ENV=production bun run dist/index.js",
+    "studio": "cloud-studio --port 3001 --hostname 0.0.0.0",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit",
+    "seed:review": "bun run scripts/createReviewAccount.ts"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/bun": "latest",
+    "prisma": "^6.17.1"
+  },
+  "peerDependencies": {
+    "typescript": "5.8.3"
+  },
+  "dependencies": {
+    "@better-auth/expo": "^1.4.7",
+    "@better-auth/passkey": "^1.4.10",
+    "@hono/node-server": "^1.19.11",
+    "@hono/zod-validator": "^0.7.6",
+    "@prisma/client": "^6.17.1",
+    "@vibecodeapp/backend-sdk": "^1.0.1",
+    "@vibecodeapp/cloud-studio": "^0.2.4",
+    "@vibecodeapp/proxy": "^2.0.3",
+    "A": "^0.0.1",
+    "bcryptjs": "^3.0.3",
+    "better-auth": "^1.4.19",
+    "crypto-js": "^4.2.0",
+    "details": "^2.0.0",
+    "hono": "^4.12.8",
+    "pdf-parse": "^2.4.5",
+    "resend": "^6.9.4",
+    "sharp": "^0.34.5",
+    "stripe": "^21.0.1",
+    "tesseract.js": "^7.0.0",
+    "zod": "4.1.11"
+  }
+}

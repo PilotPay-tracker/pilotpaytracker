@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "PilotPay Tracker",
+    "slug": "pilotpay-tracker",
+    "scheme": "pilotpaytracker",
+    "version": "1.0.2",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vibecode.pilotpaytracker.dpa2lr",
+      "buildNumber": "60",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "PilotPay Tracker uses the camera to capture photos inside the app before you publish them.",
+        "NSMicrophoneUsageDescription": "PilotPay Tracker uses the microphone to record audio clips that stay with your in-app creations.",
+        "NSPhotoLibraryUsageDescription": "PilotPay Tracker accesses your photo library to let you choose media that appears in the app.",
+        "NSCalendarsUsageDescription": "PilotPay Tracker uses your calendar to place app events onto your device schedule.",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "icon": "./icon.png"
+  }
+}
