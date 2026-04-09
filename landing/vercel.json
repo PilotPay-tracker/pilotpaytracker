@@ -1,3 +1,18 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/api/auth/:path*",
+      "destination": "/api/auth/:path*"
+    },
+    {
+      "source": "/api/cookie-debug",
+      "destination": "/api/cookie-debug"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://royal-jewel.vibecode.run/api/:path*"
+    }
+  ]
 }
+
