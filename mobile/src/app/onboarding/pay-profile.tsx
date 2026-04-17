@@ -26,6 +26,7 @@ import { useUpdateProfileMutation } from "@/lib/useProfile";
 import { useProfile } from "@/lib/state/profile-store";
 import { api } from "@/lib/api";
 import type { BenchmarkLookupResponse } from "@/lib/contracts";
+import { computePayYearFromDOH } from "@/lib/payProfile";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -158,9 +159,10 @@ interface BenchmarkCardProps {
   seat: "FO" | "Captain";
   year: number;
   editedRateCents: number | null;
+  isDohDerived?: boolean;
 }
 
-function BenchmarkCard({ benchmark, seat, year, editedRateCents }: BenchmarkCardProps) {
+function BenchmarkCard({ benchmark, seat, year, editedRateCents, isDohDerived }: BenchmarkCardProps) {
   const displayRate = editedRateCents ?? benchmark.hourlyRateCents;
   const isEdited = editedRateCents !== null && editedRateCents !== benchmark.hourlyRateCents;
 
@@ -183,6 +185,19 @@ function BenchmarkCard({ benchmark, seat, year, editedRateCents }: BenchmarkCard
           <Text style={{ color: "#f59e0b", fontWeight: "800", fontSize: 15, marginLeft: 8 }}>
             {SEAT_LABELS[seat]} — Year {year}
           </Text>
+          {isDohDerived && (
+            <View
+              style={{
+                marginLeft: 8,
+                backgroundColor: "rgba(16,185,129,0.15)",
+                borderRadius: 6,
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+              }}
+            >
+              <Text style={{ color: "#10b981", fontSize: 10, fontWeight: "700" }}>AUTO</Text>
+            </View>
+          )}
         </View>
 
         {/* Pay grid */}
@@ -271,7 +286,10 @@ export default function OnboardingPayProfileScreen() {
   const [seat, setSeat] = useState<"FO" | "Captain">(
     seatFromPosition(profile?.position)
   );
-  const [year, setYear] = useState<number>(1);
+
+  // Auto-derive pay year from DOH using anniversary date logic
+  const dohDerivedYear = computePayYearFromDOH(profile?.dateOfHire);
+  const [year, setYear] = useState<number>(dohDerivedYear);
   const [benchmark, setBenchmark] = useState<BenchmarkLookupResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [editedRateCents, setEditedRateCents] = useState<number | null>(null);
@@ -456,6 +474,7 @@ export default function OnboardingPayProfileScreen() {
                   seat={seat}
                   year={year}
                   editedRateCents={editedRateCents}
+                  isDohDerived={year === dohDerivedYear && !!profile?.dateOfHire}
                 />
               ) : (
                 <View

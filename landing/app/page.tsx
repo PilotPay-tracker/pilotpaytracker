@@ -2,7 +2,8 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000'
+  process.env.BACKEND_URL ||
+  'https://preview-emzjepkzrrpo.dev.vibecode.run'
 
 async function getEntitlementStatus(cookieHeader: string) {
   try {
@@ -12,7 +13,7 @@ async function getEntitlementStatus(cookieHeader: string) {
     })
     if (res.ok) {
       const data = await res.json()
-      return data.status as string
+      return data.subscriptionStatus ?? data.status ?? null
     }
   } catch {
     // ignore
@@ -23,7 +24,9 @@ async function getEntitlementStatus(cookieHeader: string) {
 export default async function HomePage() {
   // Check if user is already authenticated
   const cookieStore = cookies()
-  const sessionToken = cookieStore.get('better-auth.session_token')
+  const sessionToken =
+    cookieStore.get('__Secure-better-auth.session_token') ||
+    cookieStore.get('better-auth.session_token')
 
   if (sessionToken?.value) {
     // User has a session — check if it's valid and they have access
@@ -267,8 +270,24 @@ export default async function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer style={{ marginTop: '64px', color: '#334155', fontSize: '13px', textAlign: 'center' }}>
-        © 2025 Pilot Pay Tracker · All rights reserved
+      <footer
+        style={{
+          marginTop: '64px',
+          color: '#334155',
+          fontSize: '13px',
+          textAlign: 'center',
+          display: 'flex',
+          gap: '20px',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <span>© 2025 Pilot Pay Tracker · All rights reserved</span>
+        <span>·</span>
+        <a href="/privacy" style={{ color: '#475569', textDecoration: 'none' }}>Privacy Policy</a>
+        <span>·</span>
+        <a href="/terms" style={{ color: '#475569', textDecoration: 'none' }}>Terms of Use</a>
       </footer>
     </main>
   )

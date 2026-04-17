@@ -775,6 +775,7 @@ export default function TripsScreen() {
               'Content-Type': 'application/json',
               ...(cookie ? { Cookie: cookie } : {}),
             },
+            credentials: 'include',
             body: JSON.stringify({
               decision,
               conflictingTripIds: conflictData.conflicts.map(c => c.existingTrip.tripId),

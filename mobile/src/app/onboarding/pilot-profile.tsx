@@ -241,7 +241,7 @@ export default function OnboardingPilotProfileScreen() {
                   <StyledInput
                     value={firstName}
                     onChangeText={setFirstName}
-                    placeholder="Parker"
+                    placeholder="First Name"
                     icon={User}
                   />
                 </View>
@@ -250,7 +250,7 @@ export default function OnboardingPilotProfileScreen() {
                   <StyledInput
                     value={lastName}
                     onChangeText={setLastName}
-                    placeholder="Davis"
+                    placeholder="Last Name"
                     icon={User}
                   />
                 </View>

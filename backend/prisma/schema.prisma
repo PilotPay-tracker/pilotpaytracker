@@ -110,6 +110,8 @@ model Profile {
   subscriptionStatus              String    @default("inactive")
   subscriptionStartDate           DateTime?
   subscriptionEndDate             DateTime?
+  accessActive                    Boolean   @default(false)
+  accessType                      String?
   revenuecatCustomerId            String?
   stripeCustomerId                String?
   stripeSubscriptionId            String?

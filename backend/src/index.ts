@@ -135,10 +135,23 @@ app.use("*", async (c, next) => {
     return next();
   }
   try {
+    const sessionStart = Date.now();
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    const sessionMs = Date.now() - sessionStart;
     c.set("user", session?.user ?? null);
     c.set("session", session?.session ?? null);
-  } catch {
+    // Log first authenticated request after auth (profile/dashboard/trips)
+    const isPostAuthPath = c.req.path.startsWith("/api/profile") ||
+      c.req.path.startsWith("/api/dashboard") ||
+      c.req.path.startsWith("/api/trips");
+    if (isPostAuthPath) {
+      console.log(`[SessionMW] ${c.req.method} ${c.req.path} — userId=${session?.user?.id ?? "none"} (${sessionMs}ms)`);
+    }
+    if (sessionMs > 3000) {
+      console.log(`[SessionMW] Slow session lookup: ${sessionMs}ms for ${c.req.path}`);
+    }
+  } catch (err: any) {
+    console.log(`[SessionMW] getSession error on ${c.req.path}: ${err?.message}`);
     c.set("user", null);
     c.set("session", null);
   }
@@ -154,6 +167,15 @@ app.use("/api/auth/sign-in/*", authRateLimit);
 app.use("/api/auth/sign-up/*", authRateLimit);
 
 app.on(["GET", "POST"], "/api/auth/*", async (c) => {
+  const isSignup = c.req.path.includes("/sign-up/");
+  const isSignin = c.req.path.includes("/sign-in/");
+  const isSessionCheck = c.req.path.includes("/get-session") || c.req.path.includes("/session");
+  const requestStart = Date.now();
+
+  if (isSignup || isSignin) {
+    console.log(`[Auth][${isSignup ? "SIGNUP" : "SIGNIN"}] Request received: ${c.req.method} ${c.req.path}`);
+  }
+
   try {
     const request = c.req.raw;
     // Workaround for Expo/React Native: native apps don't send Origin header,
@@ -164,11 +186,25 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
       const headers = new Headers(request.headers);
       headers.set("origin", expoOrigin);
       const modifiedRequest = new Request(request, { headers });
-      return auth.handler(modifiedRequest);
+      const response = await auth.handler(modifiedRequest);
+      if (isSignup || isSignin) {
+        console.log(`[Auth][${isSignup ? "SIGNUP" : "SIGNIN"}] Response: ${response.status} (${Date.now() - requestStart}ms)`);
+      }
+      return response;
     }
-    return auth.handler(request);
+    const response = await auth.handler(request);
+    if (isSignup || isSignin) {
+      console.log(`[Auth][${isSignup ? "SIGNUP" : "SIGNIN"}] Response: ${response.status} (${Date.now() - requestStart}ms)`);
+    }
+    if (isSessionCheck) {
+      const elapsed = Date.now() - requestStart;
+      if (elapsed > 3000) {
+        console.log(`[Auth][SESSION] Slow session check: ${elapsed}ms`);
+      }
+    }
+    return response;
   } catch (err) {
-    console.error("[Auth] Handler threw unexpected error:", err);
+    console.error(`[Auth] Handler threw unexpected error (${Date.now() - requestStart}ms):`, err);
     return c.json({ error: "Authentication service error. Please try again." }, 500);
   }
 });

@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.vibecode.pilotpaytracker.dpa2lr",
-      "buildNumber": "60",
+      "buildNumber": "64",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "PilotPay Tracker uses the camera to capture photos inside the app before you publish them.",

@@ -231,7 +231,7 @@ export default function SignInScreen() {
       const { error: signInError } = await signIn(trimmedEmail, trimmedPassword);
 
       if (signInError) {
-        console.log("[SignIn] Error:", signInError.message);
+        console.log("[SignIn] Error:", signInError.message, "status:", (signInError as any).status);
         clearTimeout(longLoadTimer);
         clearTimeout(veryLongLoadTimer);
         if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
@@ -251,7 +251,13 @@ export default function SignInScreen() {
           setRateLimitUntilMs(Date.now() + retrySeconds * 1000);
           setRateLimitSecondsLeft(retrySeconds);
           displayError = "Too many attempts. Please wait before trying again.";
+        } else if (
+          msg.includes("timed out") || msg.includes("timeout") || msg.includes("aborted")
+        ) {
+          setIsConnectionError(true);
+          displayError = "Connection timed out. Please check your internet and try again.";
         } else if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
+          setIsConnectionError(true);
           displayError = "Connection error. Please check your internet and try again.";
         } else if (
           msg.includes("502") || msg.includes("503") || msg.includes("504") ||
@@ -282,11 +288,11 @@ export default function SignInScreen() {
       setIsWaitingForProfile(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: unknown) {
-      console.log("[SignIn] Exception:", err);
+      console.log("[SignIn] Exception (unexpected throw from signIn):", err);
       clearTimeout(longLoadTimer);
       clearTimeout(veryLongLoadTimer);
       if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
-      const rawMessage = err instanceof Error ? err.message.toLowerCase() : "";
+      const rawMessage = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
       let errorMessage: string;
       if (
         rawMessage.includes("network") ||
@@ -295,13 +301,14 @@ export default function SignInScreen() {
         rawMessage.includes("failed to fetch") ||
         rawMessage.includes("networkerror") ||
         rawMessage.includes("timeout") ||
+        rawMessage.includes("timed out") ||
         rawMessage.includes("econnrefused") ||
         rawMessage.includes("aborted")
       ) {
         setIsConnectionError(true);
         errorMessage = "Unable to connect to server. Please check your internet and try again.";
       } else {
-        errorMessage = err instanceof Error ? err.message : "Sign in failed. Please try again.";
+        errorMessage = err instanceof Error ? err.message : "An unexpected error occurred. Please try again.";
       }
       setError(errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

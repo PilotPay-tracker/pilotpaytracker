@@ -3,9 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { authClient } from '../../lib/auth'
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  'https://preview-qdjnuldqmyed.dev.vibecode.run'
+// Use same-origin path — Next.js rewrite in next.config.js proxies /api/* to backend
+const BACKEND_URL = ''
 
 const FEATURES = [
   'Unlimited Trip Board imports',
@@ -197,7 +196,7 @@ export default function SubscribePage() {
           {/* Pricing column */}
           <div>
             <p style={{ color: '#fff', fontWeight: 600, fontSize: '16px', marginBottom: '16px' }}>
-              Choose your plan
+              Select access option
             </p>
 
             {/* Annual */}
@@ -255,7 +254,7 @@ export default function SubscribePage() {
                   opacity: isLoading && loadingPlan !== 'yearly' ? 0.5 : 1,
                 }}
               >
-                {loadingPlan === 'yearly' ? 'Opening checkout…' : 'Start Annual Plan →'}
+                {loadingPlan === 'yearly' ? 'Opening checkout…' : 'Get Annual Access →'}
               </button>
             </div>
 
@@ -297,7 +296,7 @@ export default function SubscribePage() {
                   opacity: isLoading && loadingPlan !== 'monthly' ? 0.5 : 1,
                 }}
               >
-                {loadingPlan === 'monthly' ? 'Opening checkout…' : 'Start Monthly Plan →'}
+                {loadingPlan === 'monthly' ? 'Opening checkout…' : 'Get Monthly Access →'}
               </button>
             </div>
 
@@ -384,8 +383,8 @@ export default function SubscribePage() {
               <div>
                 <p style={{ fontWeight: 600, fontSize: '14px', margin: '0 0 4px' }}>Works on iPhone &amp; web</p>
                 <p style={{ color: '#64748b', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
-                  Subscribe once — access everywhere. Download the app from the App Store
-                  and your subscription unlocks instantly.
+                  Activate once — use everywhere. Access your account on the web dashboard
+                  and mobile app with a single login.
                 </p>
               </div>
             </div>

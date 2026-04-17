@@ -977,7 +977,7 @@ function PremiumChip() {
       className="active:opacity-70"
     >
       <Crown size={12} color="#f59e0b" />
-      <Text style={{ color: "#f59e0b", fontSize: 12, fontWeight: "600" }}>Try Free</Text>
+      <Text style={{ color: "#f59e0b", fontSize: 12, fontWeight: "600" }}>Premium Access</Text>
     </Pressable>
   );
 }

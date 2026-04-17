@@ -155,6 +155,30 @@ export default function SettingsScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Delete Account state
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setShowDeleteAccountModal(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      await api.delete("/api/profile/account");
+      await clearAllUserData(queryClient);
+      await signOut().catch(() => {});
+      setShowDeleteAccountModal(false);
+      router.replace("/welcome");
+    } catch (error) {
+      console.error("[Settings] Failed to delete account:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setIsDeletingAccount(false);
+    }
+  };
+
   // Report Issue state
   const [showReportModal, setShowReportModal] = useState(false);
   const [issueCategory, setIssueCategory] = useState<string>("bug");
@@ -860,6 +884,19 @@ export default function SettingsScreen() {
             </View>
           </Animated.View>
 
+          {/* Delete Account */}
+          <Animated.View
+            entering={FadeInDown.duration(600).delay(490)}
+            className="mx-5 mt-6"
+          >
+            <Pressable
+              onPress={handleDeleteAccount}
+              className="items-center py-4 rounded-2xl border border-red-500/30 bg-red-500/10 active:opacity-70"
+            >
+              <Text className="text-red-500 font-semibold text-base">Delete Account</Text>
+            </Pressable>
+          </Animated.View>
+
           {/* App Version */}
           <Animated.View
             entering={FadeInDown.duration(600).delay(500)}
@@ -872,6 +909,44 @@ export default function SettingsScreen() {
           </Animated.View>
         </ScrollView>
       </LinearGradient>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        visible={showDeleteAccountModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => !isDeletingAccount && setShowDeleteAccountModal(false)}
+      >
+        <View className="flex-1 bg-black/70 items-center justify-center px-6">
+          <View className="bg-slate-900 rounded-2xl p-6 w-full border border-slate-700/50">
+            <View className="w-12 h-12 rounded-full bg-red-500/20 items-center justify-center mb-4 self-center">
+              <AlertTriangle size={24} color="#ef4444" />
+            </View>
+            <Text className="text-white text-xl font-bold text-center mb-3">Delete Account</Text>
+            <Text className="text-slate-400 text-sm text-center leading-relaxed mb-6">
+              This will permanently delete your account and all associated data. This action cannot be undone.
+            </Text>
+            <Pressable
+              onPress={confirmDeleteAccount}
+              disabled={isDeletingAccount}
+              className="bg-red-600 rounded-xl py-4 items-center mb-3 active:opacity-80"
+            >
+              {isDeletingAccount ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text className="text-white font-bold text-base">Delete Account</Text>
+              )}
+            </Pressable>
+            <Pressable
+              onPress={() => setShowDeleteAccountModal(false)}
+              disabled={isDeletingAccount}
+              className="rounded-xl py-4 items-center active:opacity-70"
+            >
+              <Text className="text-slate-400 font-semibold text-base">Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* Report Issue Modal */}
       <Modal

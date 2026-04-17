@@ -112,8 +112,8 @@ export default function SubscribeCancelPage() {
               margin: '0 0 40px',
             }}
           >
-            No charge was made. You can return to the pricing page
-            whenever you&apos;re ready to subscribe.
+            No charge was made. You can return to the access options page
+            whenever you&apos;re ready.
           </p>
 
           {/* Benefits reminder */}
@@ -164,7 +164,7 @@ export default function SubscribeCancelPage() {
               textAlign: 'center',
             }}
           >
-            View Plans →
+            View Access Options →
           </a>
 
           <a

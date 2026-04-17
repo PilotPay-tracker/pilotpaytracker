@@ -13,7 +13,6 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
-  Alert,
   Linking,
   AppState,
   type AppStateStatus,
@@ -133,9 +132,7 @@ export default function PaywallScreen() {
   const { hasPremiumAccess, isSubscriptionActive, isTrialActive, entitlementStatus } = usePremiumAccess();
   const { refetch: refetchSubscription } = useSubscriptionStatus();
 
-  const [openingPlan, setOpeningPlan] = useState<"monthly" | "yearly" | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSubscribingNow, setIsSubscribingNow] = useState(false);
   const appState = useRef(AppState.currentState);
 
   // Refresh subscription when user returns to app (e.g. after completing web checkout)
@@ -171,46 +168,10 @@ export default function PaywallScreen() {
     opacity: glowOpacity.value,
   }));
 
-  // Open website subscribe page from the trial active screen
-  const handleSubscribeNow = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsSubscribingNow(true);
-    try {
-      const webUrl = getWebUrl();
-      await Linking.openURL(`${webUrl}/subscribe`);
-    } catch {
-      Alert.alert(
-        "Unable to Open Browser",
-        "Please visit pilotpaytracker.com/subscribe to start your subscription."
-      );
-    } finally {
-      setIsSubscribingNow(false);
-    }
-  }, []);
-
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
-
-  // Open website subscription page in browser for a specific plan
-  const handleSubscribe = useCallback(async (plan: "monthly" | "yearly") => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    setOpeningPlan(plan);
-    try {
-      const webUrl = getWebUrl();
-      const url = `${webUrl}/subscribe?plan=${plan}`;
-      await Linking.openURL(url);
-    } catch (error) {
-      console.error("[Paywall] Error opening subscription URL:", error);
-      Alert.alert(
-        "Unable to Open Browser",
-        "Please visit pilotpaytracker.com/subscribe to start your subscription."
-      );
-    } finally {
-      setOpeningPlan(null);
-    }
-  }, []);
 
   // Refresh subscription status (e.g. after completing web checkout)
   const handleRefreshSubscription = useCallback(async () => {
@@ -222,10 +183,6 @@ export default function PaywallScreen() {
       await refetchSubscription();
     } catch (err) {
       console.error("[Paywall] Refresh subscription failed:", err);
-      Alert.alert(
-        "Couldn't refresh",
-        "We couldn't confirm your subscription yet. Pull to refresh or try again."
-      );
     } finally {
       setIsRefreshing(false);
     }
@@ -267,12 +224,12 @@ export default function PaywallScreen() {
               <Crown size={40} color="#f59e0b" />
             </View>
             <Text className="text-white font-bold text-2xl text-center mb-2">
-              {isTrial ? "Trial Active" : "You're Subscribed!"}
+              {isTrial ? "Trial Active" : "Access Active"}
             </Text>
             <Text className="text-slate-400 text-center mb-8">
               {isTrial
                 ? "Your 7-day free trial is active.\nYou have full access to all features."
-                : "Your subscription is active.\nYou have full access to all features."}
+                : "Your account has full access to all features."}
             </Text>
             <Pressable
               onPress={handleClose}
@@ -280,26 +237,6 @@ export default function PaywallScreen() {
             >
               <Text className="text-slate-900 font-bold text-base">Continue</Text>
             </Pressable>
-            {isTrial && (
-              <>
-                <Text className="text-slate-600 text-xs text-center mt-3 mb-1">
-                  No charge until trial ends
-                </Text>
-                <Pressable
-                  onPress={handleSubscribeNow}
-                  disabled={isSubscribingNow}
-                  className="py-2 px-6 mt-1 active:opacity-60"
-                >
-                  {isSubscribingNow ? (
-                    <ActivityIndicator size="small" color="#94a3b8" />
-                  ) : (
-                    <Text className="text-slate-400 text-sm text-center">
-                      Subscribe now
-                    </Text>
-                  )}
-                </Pressable>
-              </>
-            )}
           </View>
         </LinearGradient>
       </View>
@@ -369,7 +306,7 @@ export default function PaywallScreen() {
               <View className="flex-row items-start bg-amber-500/20 rounded-xl px-4 py-3 mb-4">
                 <AlertTriangle size={20} color="#f59e0b" />
                 <Text className="text-amber-400 font-medium text-sm ml-2 flex-1">
-                  Your trial has ended. Start a subscription to continue.
+                  Your trial period has ended. Premium access is required to continue.
                 </Text>
               </View>
             )}
@@ -377,7 +314,7 @@ export default function PaywallScreen() {
             <View className="flex-row items-center mb-4">
               <Sparkles size={24} color="#f59e0b" />
               <Text className="text-amber-400 font-semibold text-sm ml-2 tracking-wide uppercase">
-                {isTrialExpired ? "Subscribe to Continue" : "Upgrade to Premium"}
+                Premium Access
               </Text>
             </View>
 
@@ -390,15 +327,12 @@ export default function PaywallScreen() {
             </Text>
           </Animated.View>
 
-          {/* Plan Buttons */}
+          {/* Access Buttons */}
           <View className="px-5 mb-6 gap-3">
             <Animated.View entering={FadeInDown.delay(200).springify()}>
-              <Pressable
-                onPress={() => handleSubscribe("monthly")}
-                disabled={openingPlan !== null}
-              >
+              <Pressable onPress={handleClose}>
                 <LinearGradient
-                  colors={openingPlan === "monthly" ? ["#475569", "#334155"] : ["#1e293b", "#0f172a"]}
+                  colors={["#1e293b", "#0f172a"]}
                   style={{
                     borderRadius: 14,
                     borderWidth: 1,
@@ -412,28 +346,21 @@ export default function PaywallScreen() {
                 >
                   <View>
                     <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-                      Start Monthly Plan
+                      Continue
                     </Text>
                     <Text style={{ color: "#94a3b8", fontSize: 13, marginTop: 2 }}>
-                      $9.99/month — cancel anytime
+                      Premium access required
                     </Text>
                   </View>
-                  {openingPlan === "monthly" ? (
-                    <ActivityIndicator color="#f59e0b" size="small" />
-                  ) : (
-                    <ExternalLink size={18} color="#64748b" />
-                  )}
+                  <Check size={18} color="#64748b" />
                 </LinearGradient>
               </Pressable>
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(280).springify()}>
-              <Pressable
-                onPress={() => handleSubscribe("yearly")}
-                disabled={openingPlan !== null}
-              >
+              <Pressable onPress={handleClose}>
                 <LinearGradient
-                  colors={openingPlan === "yearly" ? ["#475569", "#334155"] : ["#f59e0b", "#d97706"]}
+                  colors={["#f59e0b", "#d97706"]}
                   style={{
                     borderRadius: 14,
                     paddingVertical: 18,
@@ -444,30 +371,14 @@ export default function PaywallScreen() {
                   }}
                 >
                   <View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <Text style={{ color: "#0f172a", fontWeight: "700", fontSize: 16 }}>
-                        Start Annual Plan
-                      </Text>
-                      <View style={{
-                        backgroundColor: "#0f172a",
-                        borderRadius: 8,
-                        paddingHorizontal: 6,
-                        paddingVertical: 2,
-                      }}>
-                        <Text style={{ color: "#f59e0b", fontSize: 10, fontWeight: "800" }}>
-                          BEST VALUE
-                        </Text>
-                      </View>
-                    </View>
+                    <Text style={{ color: "#0f172a", fontWeight: "700", fontSize: 16 }}>
+                      Continue
+                    </Text>
                     <Text style={{ color: "#78350f", fontSize: 13, marginTop: 2 }}>
-                      $99.99/year — save 2 months
+                      Access is tied to your account
                     </Text>
                   </View>
-                  {openingPlan === "yearly" ? (
-                    <ActivityIndicator color="#0f172a" size="small" />
-                  ) : (
-                    <ExternalLink size={18} color="#78350f" />
-                  )}
+                  <Check size={18} color="#78350f" />
                 </LinearGradient>
               </Pressable>
             </Animated.View>
@@ -500,11 +411,11 @@ export default function PaywallScreen() {
           >
             <View className="flex-row items-center bg-slate-800/40 rounded-full px-4 py-2 mr-3">
               <Shield size={14} color="#22c55e" />
-              <Text className="text-slate-400 text-xs ml-2">Secure Payment</Text>
+              <Text className="text-slate-400 text-xs ml-2">Secure Access</Text>
             </View>
             <View className="flex-row items-center bg-slate-800/40 rounded-full px-4 py-2">
               <Clock size={14} color="#22c55e" />
-              <Text className="text-slate-400 text-xs ml-2">Cancel Anytime</Text>
+              <Text className="text-slate-400 text-xs ml-2">Private & Secure</Text>
             </View>
           </Animated.View>
 
@@ -521,7 +432,7 @@ export default function PaywallScreen() {
                 <RefreshCw size={15} color="#94a3b8" />
               )}
               <Text className="text-slate-400 text-sm ml-2">
-                {isRefreshing ? "Checking..." : "Already subscribed? Refresh Access"}
+                {isRefreshing ? "Checking..." : "Refresh Access"}
               </Text>
             </Pressable>
           </Animated.View>
@@ -534,7 +445,6 @@ export default function PaywallScreen() {
 
           <Animated.View entering={FadeInUp.delay(750)} className="items-center px-5 mb-4">
             <Text className="text-slate-600 text-[10px] text-center leading-relaxed">
-              Subscription managed on pilotpaytracker.com.{" "}
               <Text className="underline" onPress={handleOpenTerms}>Terms</Text>
               {" & "}
               <Text className="underline" onPress={handleOpenPrivacy}>Privacy</Text>

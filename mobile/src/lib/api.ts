@@ -10,9 +10,10 @@
 // Import fetch from expo/fetch for React Native compatibility
 // This ensures fetch works correctly across different platforms (iOS, Android, Web)
 import { fetch } from "expo/fetch";
+import { Platform } from "react-native";
 
-// Import Better Auth cookie helper for authentication
-import { getAuthCookieHeader } from "./authClient";
+// Import Better Auth helpers for authentication
+import { getAuthCookieHeader, getWebSessionToken } from "./authClient";
 
 /**
  * Backend URL Configuration
@@ -22,18 +23,32 @@ import { getAuthCookieHeader } from "./authClient";
  * This allows the app to connect to different backend instances without code changes.
  */
 const getBackendUrl = (): string => {
-  // EXPO_PUBLIC_BACKEND_URL is the canonical variable — set this in the ENV tab
-  // for TestFlight/App Store builds to point to the correct backend.
-  const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-  if (backendUrl && backendUrl.startsWith("http")) {
-    console.log("[API] Using Vibecode backend URL:", backendUrl);
-    return backendUrl;
+  // On web (browser), MUST use relative paths so all requests go through the
+  // same-origin Vercel proxy (/api/*). Calling the backend domain directly is
+  // cross-origin — the browser will NOT send session cookies, causing 401s.
+  if (Platform.OS === "web") {
+    console.log("[API] Web mode — using relative paths (same-origin proxy)");
+    return "";
   }
-  // EXPO_PUBLIC_VIBECODE_BACKEND_URL is injected by Vibecode's reverse proxy at
-  // bundle time — internal fallback for Vibecode sandbox environments.
+  // EXPO_PUBLIC_PRODUCTION_API_URL must be the server ORIGIN only
+  // (e.g. https://pilotpaytracker.com, NOT https://pilotpaytracker.com/api).
+  // API paths already include /api/... so appending /api from the base URL
+  // doubles the prefix → 404 on every native request.
+  const productionUrl = process.env.EXPO_PUBLIC_PRODUCTION_API_URL;
+  if (productionUrl && productionUrl.startsWith("https://")) {
+    // Defensive: strip any accidental trailing /api suffix
+    const normalized = productionUrl.replace(/\/api\/?$/, "");
+    if (normalized !== productionUrl) {
+      console.warn("[API] EXPO_PUBLIC_PRODUCTION_API_URL had trailing /api — stripped. Fix the env var to avoid this warning.");
+    }
+    console.log("[API] Using production URL:", normalized);
+    return normalized;
+  }
+  // EXPO_PUBLIC_VIBECODE_BACKEND_URL is injected by Vibecode's reverse proxy —
+  // fallback for Vibecode sandbox development environments only.
   const vibecodeUrl = process.env.EXPO_PUBLIC_VIBECODE_BACKEND_URL;
   if (vibecodeUrl && vibecodeUrl.startsWith("http")) {
-    console.log("[API] Using Vibecode backend URL:", vibecodeUrl);
+    console.log("[API] Using Vibecode sandbox URL:", vibecodeUrl);
     return vibecodeUrl;
   }
   // Fallback: local dev
@@ -71,9 +86,19 @@ function createTimeoutController(timeoutMs: number): { controller: AbortControll
 }
 
 /**
- * Get the current auth cookie header for API requests (Better Auth)
+ * Get the current auth headers for API requests.
+ * - On web: use Bearer token from localStorage (avoids cross-origin cookie issues)
+ * - On native: use the cookie stored by the expoClient plugin in SecureStore
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
+  if (Platform.OS === "web") {
+    const token = getWebSessionToken();
+    if (token) {
+      return { Authorization: `Bearer ${token}` };
+    }
+    // No stored token yet — rely on browser cookie jar via credentials: "include"
+    return {};
+  }
   const cookie = await getAuthCookieHeader();
   return cookie ? { Cookie: cookie } : {};
 }

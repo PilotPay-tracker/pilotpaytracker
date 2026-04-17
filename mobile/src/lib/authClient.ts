@@ -13,20 +13,39 @@ const getAppScheme = (): string => {
   return "pilotpaytracker";
 };
 
+// Strip trailing /api suffix — the auth client needs the server origin only.
+// Better Auth appends /api/auth/... itself. Without this, the sign-in URL
+// becomes https://host/api/api/auth/... (doubled prefix) causing 404s on native.
+function stripApiSuffix(url: string): string {
+  return url.replace(/\/api\/?$/, "");
+}
+
 const getBackendUrl = (): string => {
-  // EXPO_PUBLIC_BACKEND_URL is the canonical variable — set this in the ENV tab
-  // for TestFlight/App Store builds to point to the correct backend.
-  const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-  if (backendUrl && backendUrl.startsWith("https://")) {
-    console.log("[Auth] Using Vibecode backend URL:", backendUrl);
-    return backendUrl;
+  // On web (browser), auth requests MUST go through the same-origin proxy so
+  // the session cookie is set on the frontend domain (pilotpaytracker.com).
+  // Pointing directly at the backend would set the cookie on the backend domain
+  // and the frontend middleware would never see it — causing redirect loops.
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    const origin = window.location.origin;
+    console.log("[Auth] Web mode — using origin:", origin);
+    return origin;
   }
-  // EXPO_PUBLIC_VIBECODE_BACKEND_URL is injected by Vibecode's reverse proxy at
-  // bundle time — internal fallback for Vibecode sandbox environments.
+  // EXPO_PUBLIC_PRODUCTION_API_URL is the authoritative production URL.
+  // Must be just the server origin (e.g. https://pilotpaytracker.com),
+  // NOT https://pilotpaytracker.com/api — Better Auth appends /api/auth itself.
+  const productionUrl = process.env.EXPO_PUBLIC_PRODUCTION_API_URL;
+  if (productionUrl && productionUrl.startsWith("https://")) {
+    const normalized = stripApiSuffix(productionUrl);
+    console.log("[Auth] Using production URL:", normalized, productionUrl !== normalized ? `(stripped /api from ${productionUrl})` : "");
+    return normalized;
+  }
+  // EXPO_PUBLIC_VIBECODE_BACKEND_URL is injected by Vibecode's reverse proxy —
+  // fallback for Vibecode sandbox development environments only.
   const vibecodeUrl = process.env.EXPO_PUBLIC_VIBECODE_BACKEND_URL;
   if (vibecodeUrl && vibecodeUrl.startsWith("https://")) {
-    console.log("[Auth] Using Vibecode backend URL:", vibecodeUrl);
-    return vibecodeUrl;
+    const normalized = stripApiSuffix(vibecodeUrl);
+    console.log("[Auth] Using Vibecode sandbox URL:", normalized);
+    return normalized;
   }
   // Fallback: local dev
   console.log("[Auth] Using localhost fallback");
@@ -43,6 +62,13 @@ console.log("[Auth] Platform:", Platform.OS);
 
 export const authClient = createAuthClient({
   baseURL: BACKEND_URL,
+  // On web (Expo web / browser), expoClient skips all cookie handling (returns early).
+  // We must set credentials: 'include' so the browser stores and sends session cookies
+  // on cross-origin requests. On native, expoClient.init() overrides this to 'omit'
+  // and manually attaches the cookie from SecureStore — so this setting is safe for both.
+  fetchOptions: {
+    credentials: "include",
+  },
   plugins: [
     expoClient({
       scheme: APP_SCHEME,
@@ -61,6 +87,34 @@ export const hasStoredSession = async (): Promise<boolean> => {
     return false;
   }
 };
+
+// ============================================
+// Web-only session token management
+// On native, expoClient stores session in SecureStore automatically.
+// On web, expoClient skips all cookie handling — we manually persist the
+// raw session token so API calls can send it as Authorization: Bearer.
+// ============================================
+
+const WEB_TOKEN_KEY = `${STORAGE_PREFIX}_web_token`;
+
+export function persistWebSessionToken(token: string): void {
+  if (Platform.OS === "web" && typeof localStorage !== "undefined") {
+    localStorage.setItem(WEB_TOKEN_KEY, token);
+  }
+}
+
+export function clearWebSessionToken(): void {
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(WEB_TOKEN_KEY);
+  }
+}
+
+export function getWebSessionToken(): string | null {
+  if (Platform.OS === "web" && typeof localStorage !== "undefined") {
+    return localStorage.getItem(WEB_TOKEN_KEY);
+  }
+  return null;
+}
 
 /**
  * Get the stored Better Auth cookie as a Cookie header string for raw fetch calls.

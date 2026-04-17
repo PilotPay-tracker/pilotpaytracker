@@ -2,7 +2,7 @@
  * Auth Proxy Route — /api/auth/[...all]
  *
  * Problem: Better Auth sets the session cookie on the backend domain
- * (royal-jewel.vibecode.run). When the user visits pilotpaytracker.com,
+ * (preview-emzjepkzrrpo.dev.vibecode.run). When the user visits pilotpaytracker.com,
  * the browser does NOT send that cookie — cookie is domain-bound to the
  * backend. The Next.js middleware checking request.cookies sees nothing
  * and 307-redirects the user back to /login.
@@ -20,26 +20,29 @@
  *
  * Flow:
  *   Browser → pilotpaytracker.com/api/auth/* (this file)
- *           → royal-jewel.vibecode.run/api/auth/* (backend)
+ *           → [BACKEND_URL]/api/auth/* (backend)
  *           ← Set-Cookie: __Secure-better-auth.session_token (rewritten)
  *           → cookie stored for pilotpaytracker.com ✓
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 
-// Server-side: prefer BACKEND_URL (server-only), fall back to NEXT_PUBLIC_BACKEND_URL
-// NEXT_PUBLIC_BACKEND_URL is baked in at build time by next.config.js so it is
-// available here even without a runtime BACKEND_URL env var.
-const BACKEND_URL =
+// IMPORTANT: Set BACKEND_URL in your Vercel project environment variables.
+// This must be a server-only env var (no NEXT_PUBLIC_ prefix) so it is never
+// baked into the client-side JS bundle.
+const RAW_BACKEND_URL =
   process.env.BACKEND_URL ||
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  'http://localhost:3000'
+  process.env.VIBECODE_BACKEND_URL ||
+  (process.env.VERCEL ? 'https://royal-jewel.vibecode.run' : 'http://localhost:3000')
 
-console.log(`[auth-proxy] BACKEND_URL resolved to: ${BACKEND_URL} (source: ${
-  process.env.BACKEND_URL ? 'BACKEND_URL' :
-  process.env.NEXT_PUBLIC_BACKEND_URL ? 'NEXT_PUBLIC_BACKEND_URL' :
-  'fallback localhost'
-})`)
+const BACKEND_URL = RAW_BACKEND_URL.replace(/\/$/, '')
+
+if (!process.env.BACKEND_URL) {
+  console.warn(
+    `[auth-proxy] BACKEND_URL is not set — using "${BACKEND_URL}". Set BACKEND_URL in Vercel env vars for production.`
+  )
+}
+console.log(`[auth-proxy] BACKEND_URL: ${BACKEND_URL}`)
 
 async function proxyToBackend(request: NextRequest): Promise<NextResponse> {
   const pathname = request.nextUrl.pathname
@@ -63,6 +66,8 @@ async function proxyToBackend(request: NextRequest): Promise<NextResponse> {
       method: request.method,
       headers: requestHeaders,
       body,
+      // Never cache auth responses
+      cache: 'no-store',
     })
   } catch (err) {
     console.error('[auth-proxy] fetch failed:', err)
@@ -72,7 +77,8 @@ async function proxyToBackend(request: NextRequest): Promise<NextResponse> {
   // Build response headers, excluding Set-Cookie from backend (we rewrite them below).
   const responseHeaders = new Headers()
   backendResponse.headers.forEach((value, key) => {
-    if (key.toLowerCase() !== 'set-cookie') {
+    const lower = key.toLowerCase()
+    if (lower !== 'set-cookie' && lower !== 'transfer-encoding') {
       responseHeaders.set(key, value)
     }
   })
@@ -108,7 +114,7 @@ async function proxyToBackend(request: NextRequest): Promise<NextResponse> {
     // Domain is intentionally omitted — browser assigns to responding domain.
 
     const cookieStr = parts.join('; ')
-    console.log(`[auth-proxy] Set-Cookie: ${cookieStr.slice(0, 200)}`)
+    console.log(`[auth-proxy] rewritten Set-Cookie: ${cookieStr.slice(0, 200)}`)
     // append() is required for multiple Set-Cookie headers (not set())
     responseHeaders.append('Set-Cookie', cookieStr)
   }

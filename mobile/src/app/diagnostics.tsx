@@ -102,6 +102,7 @@ export default function DiagnosticsScreen() {
       const healthResponse = await fetch(`${BACKEND_URL}/api/health`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
       const data = await healthResponse.json();
 

@@ -5,18 +5,20 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import { AppState, type AppStateStatus, View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { AppState, type AppStateStatus, Platform, View, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as SplashScreen from "expo-splash-screen";
-import { authClient } from "./authClient";
+import { authClient, persistWebSessionToken, clearWebSessionToken, hasStoredSession } from "./authClient";
 import { api } from "./api";
 import { ensureProfileExists } from "./ensureProfileExists";
 import { useProfileStore, useIsProfileComplete, useProfile } from "./state/profile-store";
 import { isAppleReviewAccount, resetBypassState } from "./appleReviewBypass";
 import { setUserId, logoutUser, isRevenueCatEnabled } from "./revenuecatClient";
 
-const AUTH_TIMEOUT_MS = 12000;
+// Increased to 25s to handle Apple review / TestFlight slow networks.
+// Apple's review infrastructure can add significant latency on first connection.
+const AUTH_TIMEOUT_MS = 25000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -84,7 +86,8 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
     queryKey: ["auth-session"],
     queryFn: async () => {
       try {
-        const data = await api.get<{ session: any; user: any } | null>("/api/auth/get-session", 5000);
+        // 12 s timeout — Apple review / TestFlight networks can be slow.
+        const data = await api.get<{ session: any; user: any } | null>("/api/auth/get-session", 12000);
         return data ?? null;
       } catch (err: any) {
         // For gateway/network errors (backend cold start), THROW so React Query retries
@@ -200,7 +203,9 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
    * Load profile after authentication
    */
   const loadProfile = useCallback(async (isNewSignup = false) => {
-    console.log("[BetterAuth] Loading profile... (isNewSignup:", isNewSignup, ")");
+    const profileStart = Date.now();
+    console.log("[BetterAuth][PROFILE] ── START ─────────────────────────────────────");
+    console.log("[BetterAuth][PROFILE] isNewSignup:", isNewSignup);
     setProfileLoading(true);
     setProfileError(null);
     setIsProfileReady(false);
@@ -208,12 +213,16 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
     const result = await ensureProfileExists(isNewSignup);
 
     if (result.success && result.profile) {
-      console.log("[BetterAuth] Profile loaded successfully");
+      console.log(`[BetterAuth][PROFILE] Loaded OK in ${Date.now() - profileStart}ms:`, {
+        id: result.profile.id,
+        isComplete: result.isComplete,
+        airline: (result.profile as any).airline ?? "(not set)",
+      });
       setProfile(result.profile, result.isComplete);
       setIsProfileReady(true);
       setProfileError(null);
     } else {
-      console.log("[BetterAuth] Profile load failed:", result.error);
+      console.log(`[BetterAuth][PROFILE] FAILED in ${Date.now() - profileStart}ms:`, result.error, result.errorType);
       setProfileError(result.error ?? "Failed to load profile");
       setIsProfileReady(false);
       setProfileLoading(false);
@@ -229,7 +238,8 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
   // Load profile when user becomes authenticated
   useEffect(() => {
     if (isAuthenticated && !isLoading && !profileLoadAttemptedRef.current) {
-      console.log("[BetterAuth] User authenticated, loading profile...");
+      console.log("[BetterAuth][AUTH_EFFECT] ── User authenticated ──────────────────────────────");
+      console.log("[BetterAuth][AUTH_EFFECT] userId:", user?.id, "email:", user?.email);
       profileLoadAttemptedRef.current = true;
 
       // Check for Apple Review account
@@ -295,78 +305,49 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
     return () => subscription.remove();
   }, [refetch, queryClient]);
 
-  // Sign up with email and password
+  // Sign up with email and password (with retry for transient server errors, same pattern as signIn)
   const signUp = useCallback(async (email: string, password: string) => {
-    console.log("[BetterAuth] Signing up:", email);
+    const signupStart = Date.now();
+    console.log("[BetterAuth][SIGNUP] ── START ──────────────────────────────────────");
+    console.log("[BetterAuth][SIGNUP] Email:", email, "| timeout:", AUTH_TIMEOUT_MS, "ms");
     profileLoadAttemptedRef.current = false;
 
-    try {
-      const { error } = await withTimeout(
-        authClient.signUp.email({
-          email,
-          password,
-          name: email.split("@")[0],
-        }),
-        AUTH_TIMEOUT_MS,
-      );
-
-      if (error) {
-        const normalized = normalizeAuthError(error, "Sign up failed");
-        console.log("[BetterAuth] Sign up error:", normalized);
-        const e = new Error(normalized.message);
-        (e as any).status = normalized.status;
-        (e as any).code = normalized.code;
-        return { error: e };
-      }
-    } catch (error) {
-      const normalized = normalizeAuthError(error, "Sign up failed");
-      console.log("[BetterAuth] Sign up exception:", normalized);
-      const e = new Error(normalized.message);
-      (e as any).status = normalized.status;
-      (e as any).code = normalized.code;
-      return { error: e };
-    }
-
-    console.log("[BetterAuth] Sign up successful, refreshing session...");
-
-    // Refresh session — the auth useEffect handles RevenueCat + profile loading
-    await new Promise(resolve => setTimeout(resolve, 800));
-    await queryClient.invalidateQueries({ queryKey: ["auth-session"] });
-    await refetch();
-
-    return { error: null };
-  }, [normalizeAuthError, refetch, queryClient]);
-
-  // Sign in with email and password (with retry for transient server errors)
-  const signIn = useCallback(async (email: string, password: string) => {
-    console.log("[BetterAuth] Signing in:", email);
-    profileLoadAttemptedRef.current = false;
-
-    // More retries with longer backoff to handle backend cold starts / proxy 502s
-    const MAX_RETRIES = 5;
+    const MAX_RETRIES = 2;
     let lastNormalized: { message: string; status?: number; code?: string } | null = null;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
         if (attempt > 0) {
-          // Exponential-ish backoff: 2s, 4s, 6s, 8s, 8s
-          const backoffMs = Math.min(2000 * attempt, 8000);
-          console.log(`[BetterAuth] Sign in retry ${attempt}/${MAX_RETRIES} after ${backoffMs}ms`);
+          const backoffMs = Math.min(2000 * attempt, 4000);
+          console.log(`[BetterAuth][SIGNUP] Retry ${attempt}/${MAX_RETRIES} after ${backoffMs}ms`);
           await new Promise(resolve => setTimeout(resolve, backoffMs));
         }
 
-        const { error } = await withTimeout(
-          authClient.signIn.email({ email, password }),
+        console.log(`[BetterAuth][SIGNUP] Calling authClient.signUp.email (attempt ${attempt + 1})`);
+        const result = await withTimeout(
+          authClient.signUp.email({
+            email,
+            password,
+            name: email.split("@")[0],
+          }),
           AUTH_TIMEOUT_MS,
         );
 
+        const { error } = result;
+
         if (!error) {
+          // On web, persist the session token for use in API calls
+          if (Platform.OS === "web") {
+            const token = (result as any).data?.session?.token;
+            if (token) persistWebSessionToken(token);
+          }
+          console.log(`[BetterAuth][SIGNUP] authClient success (${Date.now() - signupStart}ms)`);
           lastNormalized = null;
-          break;
+          break; // Account created
         }
 
-        const normalized = normalizeAuthError(error, "Sign in failed");
-        console.log(`[BetterAuth] Sign in error (attempt ${attempt + 1}):`, normalized);
+        const normalized = normalizeAuthError(error, "Sign up failed");
+        console.log(`[BetterAuth][SIGNUP] Error (attempt ${attempt + 1}):`, JSON.stringify(normalized));
         lastNormalized = normalized;
 
         const isTransient =
@@ -379,7 +360,7 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
              normalized.message.toLowerCase().includes("timeout")));
 
         if (isTransient && attempt < MAX_RETRIES) {
-          console.log(`[BetterAuth] Transient error (${normalized.status}), will retry...`);
+          console.log(`[BetterAuth][SIGNUP] Transient error (${normalized.status}), will retry...`);
           continue;
         }
 
@@ -388,8 +369,8 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
         (e as any).code = normalized.code;
         return { error: e };
       } catch (error) {
-        const normalized = normalizeAuthError(error, "Sign in failed");
-        console.log(`[BetterAuth] Sign in exception (attempt ${attempt + 1}):`, normalized);
+        const normalized = normalizeAuthError(error, "Sign up failed");
+        console.log(`[BetterAuth][SIGNUP] Exception (attempt ${attempt + 1}):`, JSON.stringify(normalized));
         lastNormalized = normalized;
 
         const isTransient =
@@ -402,7 +383,7 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
              normalized.message.toLowerCase().includes("timeout")));
 
         if (isTransient && attempt < MAX_RETRIES) {
-          console.log(`[BetterAuth] Transient exception (${normalized.status}), will retry...`);
+          console.log(`[BetterAuth][SIGNUP] Transient exception (${normalized.status}), will retry...`);
           continue;
         }
 
@@ -414,20 +395,187 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
     }
 
     if (lastNormalized) {
-      console.log("[BetterAuth] All retries exhausted, returning last error:", lastNormalized);
+      console.log("[BetterAuth][SIGNUP] All signup retries exhausted:", lastNormalized);
       const e = new Error(lastNormalized.message);
       (e as any).status = lastNormalized.status;
       (e as any).code = lastNormalized.code;
       return { error: e };
     }
 
-    console.log("[BetterAuth] Sign in successful, refreshing session...");
+    console.log(`[BetterAuth][SIGNUP] Account created OK (${Date.now() - signupStart}ms). Polling for session...`);
 
-    // Refresh session — the auth useEffect handles RevenueCat + profile loading
-    await new Promise(resolve => setTimeout(resolve, 800));
-    await queryClient.invalidateQueries({ queryKey: ["auth-session"] });
-    await refetch();
+    // Poll for the session after signup. On slow/restricted networks the session
+    // cookie may not be readable immediately. We try up to 5 times with increasing
+    // waits (1.5s, 2s, 2.5s, 3s, 3.5s = up to ~13s total) before giving up.
+    // Giving up is non-fatal — the create-account screen shows "Setting Up…" and
+    // retries via its own 8-second safety-net timer.
+    const SESSION_POLL_ATTEMPTS = 5;
+    let sessionFound = false;
+    for (let poll = 1; poll <= SESSION_POLL_ATTEMPTS; poll++) {
+      const waitMs = 1000 + (poll * 500); // 1.5s, 2s, 2.5s, 3s, 3.5s
+      console.log(`[BetterAuth][SIGNUP] Session poll ${poll}/${SESSION_POLL_ATTEMPTS}: waiting ${waitMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+      try {
+        await queryClient.invalidateQueries({ queryKey: ["auth-session"] });
+        const result = await refetch();
+        const hasSession = !!(result.data as any)?.user;
+        console.log(`[BetterAuth][SIGNUP] Session poll ${poll} result: hasSession=${hasSession} (${Date.now() - signupStart}ms total)`);
+        if (hasSession) {
+          sessionFound = true;
+          break;
+        }
+      } catch (pollErr) {
+        console.log(`[BetterAuth][SIGNUP] Session poll ${poll} error (non-fatal):`, pollErr);
+      }
+    }
 
+    if (!sessionFound) {
+      // Session was not confirmed in time — this is non-fatal.
+      // The create-account screen shows "Setting Up Your Account…" and has its
+      // own 8-second safety-net that calls retryProfileLoad(). The AppState
+      // handler will also pick up the session when the app is next foregrounded.
+      console.log(`[BetterAuth][SIGNUP] Session not confirmed after polling — returning success anyway. ` +
+        `The screen retry timer will handle it. (total: ${Date.now() - signupStart}ms)`);
+    }
+
+    console.log(`[BetterAuth][SIGNUP] ── DONE (${Date.now() - signupStart}ms) ──────────────────────────────`);
+    return { error: null };
+  }, [normalizeAuthError, refetch, queryClient]);
+
+  // Sign in with email and password (with retry for transient server errors)
+  const signIn = useCallback(async (email: string, password: string) => {
+    const signinStart = Date.now();
+    console.log("[BetterAuth][SIGNIN] ── START ──────────────────────────────────────");
+    console.log("[BetterAuth][SIGNIN] Email:", email, "| timeout:", AUTH_TIMEOUT_MS, "ms");
+    profileLoadAttemptedRef.current = false;
+
+    // Retry only for clear transient server errors (502/503/504).
+    // Keep MAX_RETRIES low so users get feedback quickly instead of waiting 60+ seconds.
+    const MAX_RETRIES = 2;
+    let lastNormalized: { message: string; status?: number; code?: string } | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) {
+          // Brief backoff before retrying: 2s, 4s
+          const backoffMs = Math.min(2000 * attempt, 4000);
+          console.log(`[BetterAuth][SIGNIN] Retry ${attempt}/${MAX_RETRIES} after ${backoffMs}ms`);
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+        }
+
+        console.log(`[BetterAuth][SIGNIN] Calling authClient.signIn.email (attempt ${attempt + 1})`);
+        const result = await withTimeout(
+          authClient.signIn.email({ email, password }),
+          AUTH_TIMEOUT_MS,
+        );
+
+        const { error } = result;
+
+        if (!error) {
+          // On web, persist the session token for use in API calls (bypasses cross-origin cookie issues)
+          if (Platform.OS === "web") {
+            const token = (result as any).data?.session?.token;
+            if (token) persistWebSessionToken(token);
+          }
+          console.log(`[BetterAuth][SIGNIN] authClient success (${Date.now() - signinStart}ms)`);
+          // On native, verify the session cookie was stored in SecureStore by expoClient
+          if (Platform.OS !== "web") {
+            const cookieStored = await hasStoredSession();
+            console.log(`[BetterAuth][SIGNIN] Native SecureStore cookie present: ${cookieStored}`);
+          }
+          lastNormalized = null;
+          break;
+        }
+
+        const normalized = normalizeAuthError(error, "Sign in failed");
+        console.log(`[BetterAuth][SIGNIN] Error (attempt ${attempt + 1}):`, JSON.stringify(normalized));
+        // Also log the raw error shape for diagnosing unexpected Better Auth error formats
+        if (error && typeof error === "object") {
+          const e = error as any;
+          console.log(`[BetterAuth][SIGNIN] Raw error — status:${e.status} code:${e.code} message:${e.message}`);
+        }
+        lastNormalized = normalized;
+
+        const isTransient =
+          normalized.status === 502 ||
+          normalized.status === 503 ||
+          normalized.status === 504 ||
+          (normalized.status === undefined &&
+            (normalized.message.toLowerCase().includes("fetch") ||
+             normalized.message.toLowerCase().includes("network") ||
+             normalized.message.toLowerCase().includes("timeout")));
+
+        if (isTransient && attempt < MAX_RETRIES) {
+          console.log(`[BetterAuth][SIGNIN] Transient error (${normalized.status}), will retry...`);
+          continue;
+        }
+
+        const e = new Error(normalized.message);
+        (e as any).status = normalized.status;
+        (e as any).code = normalized.code;
+        return { error: e };
+      } catch (error) {
+        const normalized = normalizeAuthError(error, "Sign in failed");
+        console.log(`[BetterAuth][SIGNIN] Exception (attempt ${attempt + 1}):`, JSON.stringify(normalized));
+        if (error && typeof error === "object") {
+          const e = error as any;
+          console.log(`[BetterAuth][SIGNIN] Raw exception — name:${e.name} message:${e.message} status:${e.status}`);
+        }
+        lastNormalized = normalized;
+
+        const isTransient =
+          normalized.status === 502 ||
+          normalized.status === 503 ||
+          normalized.status === 504 ||
+          (normalized.status === undefined &&
+            (normalized.message.toLowerCase().includes("fetch") ||
+             normalized.message.toLowerCase().includes("network") ||
+             normalized.message.toLowerCase().includes("timeout")));
+
+        if (isTransient && attempt < MAX_RETRIES) {
+          console.log(`[BetterAuth][SIGNIN] Transient exception (${normalized.status}), will retry...`);
+          continue;
+        }
+
+        const e = new Error(normalized.message);
+        (e as any).status = normalized.status;
+        (e as any).code = normalized.code;
+        return { error: e };
+      }
+    }
+
+    if (lastNormalized) {
+      console.log("[BetterAuth][SIGNIN] All retries exhausted:", lastNormalized);
+      const e = new Error(lastNormalized.message);
+      (e as any).status = lastNormalized.status;
+      (e as any).code = lastNormalized.code;
+      return { error: e };
+    }
+
+    console.log(`[BetterAuth][SIGNIN] Auth OK (${Date.now() - signinStart}ms). Refreshing session...`);
+
+    // Refresh session — the auth useEffect handles RevenueCat + profile loading.
+    // Wrap in try-catch: if refetch throws (e.g., brief network blip after auth), we
+    // still want to return success so the user isn't stuck on the sign-in screen.
+    // The navigation useEffect will load the session on the next render cycle.
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500)); // slightly longer wait for cookie propagation
+      await queryClient.invalidateQueries({ queryKey: ["auth-session"] });
+      // Log the state of SecureStore before session check to diagnose native cookie issues
+      if (Platform.OS !== "web") {
+        const cookieExists = await hasStoredSession();
+        console.log(`[BetterAuth][SIGNIN] Pre-session-check: SecureStore cookie present=${cookieExists}`);
+      }
+      const result = await refetch();
+      const hasSession = !!(result.data as any)?.user;
+      const userId = (result.data as any)?.user?.id ?? "none";
+      console.log(`[BetterAuth][SIGNIN] Session check after signin: hasSession=${hasSession} userId=${userId} (${Date.now() - signinStart}ms total)`);
+    } catch (refreshErr) {
+      console.log("[BetterAuth][SIGNIN] Session refresh failed (non-fatal):", refreshErr);
+      // Non-fatal: the auth state polling will pick up the session shortly.
+    }
+
+    console.log(`[BetterAuth][SIGNIN] ── DONE (${Date.now() - signinStart}ms) ─────────────────────────────`);
     return { error: null };
   }, [normalizeAuthError, refetch, queryClient]);
 
@@ -435,6 +583,10 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
   const signOut = useCallback(async () => {
     console.log("[BetterAuth] Signing out");
     await authClient.signOut();
+    // Clear web session token on sign out
+    if (Platform.OS === "web") {
+      clearWebSessionToken();
+    }
     // Log out of RevenueCat to clear the linked user
     if (isRevenueCatEnabled()) {
       logoutUser().catch(() => {});
@@ -456,6 +608,10 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
     console.log("[BetterAuth] Signing out for account switch");
     skipNavRedirectRef.current = true;
     await authClient.signOut().catch(() => {});
+    // Clear web session token on sign out
+    if (Platform.OS === "web") {
+      clearWebSessionToken();
+    }
     if (isRevenueCatEnabled()) {
       logoutUser().catch(() => {});
     }

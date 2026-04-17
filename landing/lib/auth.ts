@@ -11,12 +11,17 @@ import { createAuthClient } from 'better-auth/react'
  * With the proxy at /api/auth/[...all], all auth requests flow through
  * pilotpaytracker.com → the cookie is set on pilotpaytracker.com → the
  * middleware finds the cookie → protected routes work.
+ *
+ * CRITICAL: Never use NEXT_PUBLIC_BACKEND_URL here — that is the backend
+ * URL, not the frontend. Using it would send auth requests directly to the
+ * backend, bypassing the proxy, and the session cookie would be set on the
+ * wrong domain.
  */
 const baseURL =
   typeof window !== 'undefined'
-    ? window.location.origin                          // Browser: pilotpaytracker.com
-    : process.env.NEXT_PUBLIC_APP_URL ||              // SSR: from Vercel env var
-      'https://pilotpaytracker.com'                   // SSR fallback
+    ? window.location.origin                          // Browser: always correct
+    : process.env.NEXT_PUBLIC_APP_URL ||              // SSR: set in Vercel env vars
+      'https://pilotpaytracker.com'                   // SSR fallback — canonical domain
 
 export const authClient = createAuthClient({
   baseURL,

@@ -1,0 +1,9 @@
+{
+  "buildCommand": "bun run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/auth/:path*", "destination": "/api/auth/:path*" },
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

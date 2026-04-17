@@ -14,6 +14,7 @@ const APPLE_REVIEW_EMAILS = [
   "review@pilotpaytracker.app",
   "reviewer@pilotpaytracker.app",
   "reviewpaid@pilotpaytracker.app",
+  "tester@pilotpaytracker.app",
 ];
 
 // ============================================
@@ -95,6 +96,8 @@ subscriptionRouter.get("/status", async (c) => {
       subscriptionStatus: true,
       subscriptionStartDate: true,
       subscriptionEndDate: true,
+      accessActive: true,
+      accessType: true,
       revenuecatCustomerId: true,
       stripeCustomerId: true,
       stripeSubscriptionId: true,
@@ -111,10 +114,11 @@ subscriptionRouter.get("/status", async (c) => {
       trialStartedAt: null,
       trialEndsAt: null,
       accessExpiresAt: null,
+      accessActive: false,
+      accessType: null,
       plan: null,
       hasPremiumAccess: false,
       trialDaysRemaining: null,
-      // legacy fields kept for backward compat
       trialStartDate: null,
       trialEndDate: null,
       subscriptionStartDate: null,
@@ -130,7 +134,7 @@ subscriptionRouter.get("/status", async (c) => {
     if (profile.subscriptionStatus !== "active" && profile.subscriptionStatus !== "active_lifetime") {
       db.profile.update({
         where: { userId: user.id },
-        data: { subscriptionStatus: "active", subscriptionStartDate: new Date(), subscriptionEndDate: new Date("2030-12-31") },
+        data: { subscriptionStatus: "active", subscriptionStartDate: new Date(), subscriptionEndDate: new Date("2030-12-31"), accessActive: true, accessType: "lifetime" },
       }).catch(console.error);
     }
     return c.json({
@@ -139,10 +143,11 @@ subscriptionRouter.get("/status", async (c) => {
       trialStartedAt: null,
       trialEndsAt: null,
       accessExpiresAt: "2030-12-31T00:00:00.000Z",
+      accessActive: true,
+      accessType: "lifetime",
       plan: profile.plan ?? null,
       hasPremiumAccess: true,
       trialDaysRemaining: null,
-      // legacy
       trialStartDate: null,
       trialEndDate: null,
       subscriptionStartDate: profile.subscriptionStartDate?.toISOString() ?? new Date().toISOString(),
@@ -166,6 +171,8 @@ subscriptionRouter.get("/status", async (c) => {
           subscriptionStartDate: new Date(),
           subscriptionEndDate: null,
           adminRole: "super_admin",
+          accessActive: true,
+          accessType: "lifetime",
         },
       }).catch(console.error);
     }
@@ -175,10 +182,11 @@ subscriptionRouter.get("/status", async (c) => {
       trialStartedAt: null,
       trialEndsAt: null,
       accessExpiresAt: null,
+      accessActive: true,
+      accessType: "lifetime",
       plan: profile.plan ?? "lifetime",
       hasPremiumAccess: true,
       trialDaysRemaining: null,
-      // legacy
       trialStartDate: null,
       trialEndDate: null,
       subscriptionStartDate: profile.subscriptionStartDate?.toISOString() ?? new Date().toISOString(),
@@ -210,6 +218,8 @@ subscriptionRouter.get("/status", async (c) => {
       data: {
         trialStatus: "expired",
         subscriptionStatus: "expired",
+        accessActive: false,
+        accessType: null,
       },
     }).catch(console.error);
   }
@@ -238,6 +248,14 @@ subscriptionRouter.get("/status", async (c) => {
       profile.currentPeriodEnd?.toISOString() ?? null;
   }
 
+  // Reconcile stored accessActive with computed entitlement (handles edge cases)
+  const computedAccessActive = hasPremiumAccess;
+  const computedAccessType = profile.accessType ?? (
+    entitlementStatus === "trialing" ? "trial" :
+    entitlementStatus === "active" ? (profile.stripeSubscriptionId ? "stripe" : profile.revenuecatCustomerId ? "revenuecat" : "stripe") :
+    null
+  );
+
   return c.json({
     subscriptionStatus: entitlementStatus,
     trialStatus: profile.trialStatus === "active" && isTrialExpired(profile.trialEndDate)
@@ -246,6 +264,8 @@ subscriptionRouter.get("/status", async (c) => {
     trialStartedAt: profile.trialStartDate?.toISOString() ?? null,
     trialEndsAt: profile.trialEndDate?.toISOString() ?? null,
     accessExpiresAt,
+    accessActive: computedAccessActive,
+    accessType: computedAccessActive ? computedAccessType : null,
     plan: profile.plan ?? null,
     hasPremiumAccess,
     trialDaysRemaining,
@@ -294,8 +314,9 @@ subscriptionRouter.post("/start-trial", async (c) => {
       trialStatus: "active",
       trialStartDate: now,
       trialEndDate: trialEndDate,
-      // Use trialing as the canonical subscription status during the free trial
       subscriptionStatus: "trialing",
+      accessActive: true,
+      accessType: "trial",
     },
   });
 
@@ -337,6 +358,8 @@ subscriptionRouter.post(
     const updateData: Record<string, unknown> = {
       subscriptionStatus: body.isActive ? "active" : "expired",
       subscriptionStartDate: body.isActive ? new Date() : null,
+      accessActive: body.isActive,
+      accessType: body.isActive ? "revenuecat" : null,
     };
 
     if (body.revenuecatCustomerId) {
@@ -382,7 +405,7 @@ subscriptionRouter.post(
             newEndDate.setDate(newEndDate.getDate() + 30);
             await db.profile.updateMany({
               where: { userId: pendingReferral.referrerId },
-              data: { subscriptionEndDate: newEndDate, subscriptionStatus: "active" },
+              data: { subscriptionEndDate: newEndDate, subscriptionStatus: "active", accessActive: true, accessType: "stripe" },
             });
             await db.referralStats.update({
               where: { userId: pendingReferral.referrerId },
@@ -441,11 +464,15 @@ subscriptionRouter.post(
           ? new Date(body.trialEndDate)
           : getTrialEndDate();
         updateData.subscriptionStatus = "trialing";
+        updateData.accessActive = true;
+        updateData.accessType = "trial";
       } else if (body.trialStatus === "expired") {
         const pastDate = new Date();
         pastDate.setDate(pastDate.getDate() - 1);
         updateData.trialEndDate = pastDate;
         updateData.subscriptionStatus = "expired";
+        updateData.accessActive = false;
+        updateData.accessType = null;
       }
     }
 
@@ -453,6 +480,8 @@ subscriptionRouter.post(
       updateData.subscriptionStatus = body.subscriptionStatus;
       if (body.subscriptionStatus === "active") {
         updateData.subscriptionStartDate = new Date();
+        updateData.accessActive = true;
+        updateData.accessType = "stripe";
         if (body.subscriptionEndDate) {
           updateData.subscriptionEndDate = new Date(body.subscriptionEndDate);
         } else {
@@ -460,6 +489,9 @@ subscriptionRouter.post(
           endDate.setFullYear(endDate.getFullYear() + 1);
           updateData.subscriptionEndDate = endDate;
         }
+      } else if (body.subscriptionStatus === "expired" || body.subscriptionStatus === "cancelled") {
+        updateData.accessActive = false;
+        updateData.accessType = null;
       }
     }
 

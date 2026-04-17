@@ -4,7 +4,9 @@ import { Providers } from './providers'
 import AppShell from '@/components/AppShell'
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000'
+  process.env.BACKEND_URL ||
+  process.env.VIBECODE_BACKEND_URL ||
+  (process.env.VERCEL ? 'https://royal-jewel.vibecode.run' : 'http://localhost:3000')
 
 export default async function AppLayout({
   children,
@@ -52,7 +54,7 @@ export default async function AppLayout({
 
     if (res.ok) {
       const data = await res.json()
-      entitlementStatus = data.status ?? 'unknown'
+      entitlementStatus = data.subscriptionStatus ?? data.status ?? 'unknown'
     }
   } catch (err) {
     // Backend unreachable — allow through gracefully, client-side will handle

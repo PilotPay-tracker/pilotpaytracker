@@ -222,6 +222,7 @@ export default function PayStatementUploadScreen() {
             "Content-Type": "application/json",
             ...(cookie ? { Cookie: cookie } : {}),
           },
+          credentials: "include",
           body: JSON.stringify({}),
         }
       );

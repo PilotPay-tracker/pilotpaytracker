@@ -221,6 +221,8 @@ stripeRouter.get("/verify-session", async (c) => {
           data: {
             subscriptionStatus: "active",
             subscriptionStartDate: new Date(),
+            accessActive: true,
+            accessType: "stripe",
             ...(currentPeriodEnd && { subscriptionEndDate: currentPeriodEnd, currentPeriodEnd }),
             ...(plan && { plan }),
             ...(stripeCustomerId && { stripeCustomerId }),
@@ -304,6 +306,7 @@ stripeRouter.post("/webhook", async (c) => {
 
         const entitlementStatus = stripeStatusToEntitlement(stripeSubStatus);
 
+        const isAccessActive = entitlementStatus === "active" || entitlementStatus === "trialing";
         await db.profile.updateMany({
           where: { userId },
           data: {
@@ -311,6 +314,8 @@ stripeRouter.post("/webhook", async (c) => {
             subscriptionStartDate: new Date(),
             subscriptionEndDate: currentPeriodEnd,
             plan: plan,
+            accessActive: isAccessActive,
+            accessType: isAccessActive ? "stripe" : null,
             ...(stripeCustomerId && { stripeCustomerId }),
             ...(stripeSubscriptionId && { stripeSubscriptionId }),
             ...(stripePriceId && { stripePriceId }),
@@ -349,7 +354,7 @@ stripeRouter.post("/webhook", async (c) => {
               newEndDate.setDate(newEndDate.getDate() + 30);
               await db.profile.updateMany({
                 where: { userId: pendingReferral.referrerId },
-                data: { subscriptionEndDate: newEndDate, subscriptionStatus: "active" },
+                data: { subscriptionEndDate: newEndDate, subscriptionStatus: "active", accessActive: true, accessType: "stripe" },
               });
               await db.referralStats.update({
                 where: { userId: pendingReferral.referrerId },
@@ -377,6 +382,7 @@ stripeRouter.post("/webhook", async (c) => {
           : null;
         const entitlementStatus = stripeStatusToEntitlement(sub.status);
 
+        const isAccessActiveCreated = entitlementStatus === "active" || entitlementStatus === "trialing";
         await db.profile.updateMany({
           where: { userId },
           data: {
@@ -384,6 +390,8 @@ stripeRouter.post("/webhook", async (c) => {
             subscriptionStartDate: new Date(),
             subscriptionEndDate: currentPeriodEnd,
             plan: plan,
+            accessActive: isAccessActiveCreated,
+            accessType: isAccessActiveCreated ? "stripe" : null,
             ...(stripeCustomerId && { stripeCustomerId }),
             stripeSubscriptionId: sub.id,
             ...(stripePriceId && { stripePriceId }),
@@ -407,12 +415,15 @@ stripeRouter.post("/webhook", async (c) => {
           : null;
         const entitlementStatus = stripeStatusToEntitlement(sub.status);
 
+        const isAccessActiveUpdated = entitlementStatus === "active" || entitlementStatus === "trialing";
         await db.profile.updateMany({
           where: { userId },
           data: {
             subscriptionStatus: entitlementStatus,
             subscriptionEndDate: currentPeriodEnd,
             stripeSubscriptionId: sub.id,
+            accessActive: isAccessActiveUpdated,
+            accessType: isAccessActiveUpdated ? "stripe" : null,
             ...(plan && { plan }),
             ...(stripePriceId && { stripePriceId }),
             ...(currentPeriodEnd && { currentPeriodEnd }),
@@ -434,6 +445,8 @@ stripeRouter.post("/webhook", async (c) => {
             subscriptionStatus: "expired",
             subscriptionEndDate: new Date(),
             currentPeriodEnd: new Date(),
+            accessActive: false,
+            accessType: null,
           },
         });
 
@@ -462,6 +475,8 @@ stripeRouter.post("/webhook", async (c) => {
           data: {
             subscriptionStatus: "active",
             subscriptionEndDate: currentPeriodEnd,
+            accessActive: true,
+            accessType: "stripe",
             ...(currentPeriodEnd && { currentPeriodEnd }),
             ...(stripePriceId && { stripePriceId }),
           },

@@ -228,30 +228,61 @@ dashboardRouter.get("/", async (c) => {
   // Note: payCreditMinutes on each trip already includes any applied premium credit,
   // so we do NOT add premium event deltas separately (that would double-count).
 
-  // Check legacy flightEntry table with only needed fields
-  const periodFlights = await db.flightEntry.findMany({
+  // Get recent flights from the Leg table (actual imported schedule data).
+  // The legacy flightEntry table is no longer populated by imports — all data
+  // is in the Trip → DutyDay → Leg chain.
+  const recentLegRows = await db.leg.findMany({
     where: {
-      userId: user.id,
-      dateISO: { gte: startISO, lte: endISO },
+      isDeadhead: false,
+      dutyDay: {
+        trip: {
+          userId: user.id,
+          status: { notIn: ["cancelled", "dropped", "override"] },
+        },
+      },
     },
+    orderBy: [
+      { dutyDay: { dutyDate: "desc" } },
+      { legIndex: "asc" },
+    ],
+    take: 8,
     select: {
-      blockMinutes: true,
+      id: true,
+      flightNumber: true,
+      origin: true,
+      destination: true,
+      plannedBlockMinutes: true,
+      actualBlockMinutes: true,
+      plannedCreditMinutes: true,
       creditMinutes: true,
-      totalPayCents: true,
+      calculatedPayCents: true,
+      notes: true,
+      createdAt: true,
+      dutyDay: { select: { dutyDate: true } },
     },
   });
 
-  for (const flight of periodFlights) {
-    totalBlockMinutes += flight.blockMinutes;
-    totalCreditMinutes += flight.creditMinutes;
-    totalPayCents += flight.totalPayCents;
-  }
-
-  // Get recent flights (last 5) - legacy support
-  const recentFlights = await db.flightEntry.findMany({
-    where: { userId: user.id },
-    orderBy: { dateISO: "desc" },
-    take: 5,
+  const recentFlights = recentLegRows.map((leg) => {
+    const blockMin = leg.actualBlockMinutes || leg.plannedBlockMinutes;
+    const creditMin = leg.creditMinutes || leg.plannedCreditMinutes;
+    const payFromCredit =
+      creditMin > 0 && profile.hourlyRateCents > 0
+        ? Math.round((creditMin / 60) * profile.hourlyRateCents)
+        : 0;
+    return {
+      id: leg.id,
+      dateISO: leg.dutyDay.dutyDate,
+      airline: "UPS",
+      flightNumber: leg.flightNumber,
+      origin: leg.origin,
+      destination: leg.destination,
+      blockMinutes: blockMin,
+      creditMinutes: creditMin,
+      hourlyRateCents: profile.hourlyRateCents,
+      totalPayCents: leg.calculatedPayCents || payFromCredit,
+      notes: leg.notes,
+      createdAt: leg.createdAt.toISOString(),
+    };
   });
 
   // Contract Guarantee Floor
@@ -488,7 +519,7 @@ dashboardRouter.get("/", async (c) => {
     };
   }
 
-  const entryCount = legCount + periodFlights.length;
+  const entryCount = legCount;
 
   const response: GetDashboardResponse = {
     currentPeriod: period,
@@ -499,7 +530,7 @@ dashboardRouter.get("/", async (c) => {
     totalPayCents,
     entryCount,
     hourlyRateCents: profile.hourlyRateCents,
-    recentFlights: recentFlights.map(formatFlightEntry),
+    recentFlights,
     // Guarantee breakdown fields
     paidCreditMinutes,
     jaPickupCreditMinutes,

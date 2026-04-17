@@ -166,20 +166,15 @@ export function SubscriptionGate({ children }: SubscriptionGateProps) {
 
             {/* Title */}
             <Text className="text-white font-bold text-2xl text-center mb-3">
-              Your Trial Has Ended
+              Premium Access Required
             </Text>
 
             {/* Description */}
-            <Text className="text-slate-400 text-center text-base leading-relaxed mb-2">
-              Your 7-day free trial is over.
-            </Text>
             <Text className="text-slate-400 text-center text-base leading-relaxed mb-8">
-              Subscribe on{" "}
-              <Text className="text-amber-400 font-semibold">pilotpaytracker.com</Text>
-              {" "}to keep tracking your pay.
+              This feature is available to accounts with active access.
             </Text>
 
-            {/* Subscribe button → opens paywall which goes to website */}
+            {/* Continue button → opens paywall */}
             <Pressable
               onPress={handleSubscribe}
               className="w-full bg-amber-500 py-4 rounded-2xl items-center active:bg-amber-600 mb-4"
@@ -187,7 +182,7 @@ export function SubscriptionGate({ children }: SubscriptionGateProps) {
               <View className="flex-row items-center">
                 <Crown size={20} color="#0f172a" />
                 <Text className="text-slate-900 font-bold text-base ml-2">
-                  Subscribe on Website
+                  Continue
                 </Text>
               </View>
             </Pressable>
@@ -204,7 +199,7 @@ export function SubscriptionGate({ children }: SubscriptionGateProps) {
                 <>
                   <RefreshCw size={16} color="#94a3b8" />
                   <Text className="text-slate-400 text-sm ml-2">
-                    Already subscribed? Restore Access
+                    Refresh Access
                   </Text>
                 </>
               )}

@@ -440,6 +440,36 @@ profileRouter.delete("/", async (c) => {
 });
 
 // ============================================
+// DELETE /api/account - Permanently delete user account and all data
+// ============================================
+profileRouter.delete("/account", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  console.log(`🗑️ [Account] Permanently deleting account for user: ${user.id}`);
+
+  // Delete all user data in dependency order
+  await db.calendarPendingChange.deleteMany({ where: { userId: user.id } });
+  await db.calendarConnection.deleteMany({ where: { userId: user.id } });
+  await db.premiumEventSuggestion.deleteMany({ where: { userId: user.id } });
+  await db.userCustomTerm.deleteMany({ where: { userId: user.id } });
+  await db.userHotelDirectory.deleteMany({ where: { userId: user.id } });
+  await db.userNotificationSettings.deleteMany({ where: { userId: user.id } });
+  await db.payrollProfile.deleteMany({ where: { userId: user.id } });
+  await db.payEvent.deleteMany({ where: { userId: user.id } });
+  await db.flightEntry.deleteMany({ where: { userId: user.id } });
+  await db.trip.deleteMany({ where: { userId: user.id } });
+  await db.profile.deleteMany({ where: { userId: user.id } });
+
+  // Delete the auth user record (cascades to sessions, accounts, passkeys)
+  await db.user.delete({ where: { id: user.id } });
+
+  console.log(`✅ [Account] Permanently deleted account: ${user.id}`);
+
+  return c.json({ success: true });
+});
+
+// ============================================
 // GET /api/profile/stats - Get user statistics
 // Calculates pay from credit minutes * hourly rate (like dashboard)
 // ============================================

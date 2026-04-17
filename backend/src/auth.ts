@@ -82,6 +82,8 @@ export const auth = betterAuth({
     "https://royal-jewel.vibecode.run",
     "https://pilotpaytracker.com",
     "https://www.pilotpaytracker.com",
+    "https://pilotpaytracker.vercel.app",
+    "https://*.pilotpaytracker.vercel.app",
     "https://*.vibecodeapp.com",
     "https://*.share.sandbox.dev",
     "https://*.vibecode.dev",
@@ -111,13 +113,24 @@ export const auth = betterAuth({
     // pilotpaytracker.com. Enabling crossSubDomainCookies would set Domain=royal-jewel.vibecode.run
     // on cookies (the full hostname of baseURL), which the proxy then strips — but it
     // adds unnecessary complexity and confusion.
-    disableCSRFCheck: true,
+    disableCSRFCheck: false,
     trustedProxyHeaders: true,
-    // Use SameSite=Lax (secure default). The proxy rewrites SameSite=None → Lax anyway,
-    // but setting it here explicitly ensures consistency and removes the need for Partitioned.
+    // Explicitly force secure cookie mode so cookie names use the __Secure- prefix
+    // consistently regardless of how BACKEND_URL is resolved at runtime.
+    useSecureCookies: true,
+    // SameSite=None + Secure required for cross-domain cookie delivery.
+    // The web app at pilotpaytracker.vercel.app and the native mobile app both
+    // communicate with a backend on a different origin, so these flags are mandatory
+    // for the browser to store and send cookies on cross-origin requests.
+    //
+    // Chrome / Edge enforce: SameSite=None cookies MUST also carry Secure=true,
+    // otherwise the browser silently drops them — which is why desktop browsers
+    // see "no session cookie" while iOS Safari (which is more lenient) may still work.
     defaultCookieAttributes: {
-      sameSite: "lax",
+      sameSite: "none",
       secure: true,
+      httpOnly: true,
+      path: "/",
     },
   },
 });

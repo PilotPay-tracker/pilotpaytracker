@@ -30,6 +30,9 @@ interface SubscriptionStatus {
   trialStartedAt: string | null;
   trialEndsAt: string | null;
   accessExpiresAt: string | null;
+  // Explicit stored access flags
+  accessActive: boolean;
+  accessType: "trial" | "stripe" | "revenuecat" | "lifetime" | null;
   plan: string | null;
   hasPremiumAccess: boolean;
   trialDaysRemaining: number | null;
@@ -205,6 +208,8 @@ export function usePremiumAccess() {
     entitlementStatus,
     plan: status?.plan ?? null,
     accessExpiresAt: status?.accessExpiresAt ?? null,
+    accessActive: isReviewAccount ? true : (status?.accessActive ?? hasPremiumAccess),
+    accessType: isReviewAccount ? ("lifetime" as const) : (status?.accessType ?? null),
     // Normalised subscriptionStatus using canonical values
     subscriptionStatus: isReviewAccount ? "active" as EntitlementStatus : entitlementStatus,
     // Keep trialStatus for any legacy consumers

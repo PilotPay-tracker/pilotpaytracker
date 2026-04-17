@@ -3,26 +3,14 @@
  * Reuses shared contracts from @shared/contracts
  * Adapted from mobile/src/lib/api.ts for browser environment
  *
- * In dev, Vite proxy forwards /api → localhost:3000
- * In production, uses VITE_BACKEND_URL
+ * All requests use relative /api/* URLs (same-origin).
+ * - Dev: Vite proxy forwards /api → localhost:3000
+ * - Prod: Vercel Edge Functions at web/api/* proxy to the backend,
+ *         keeping the browser on the frontend domain so session cookies work.
  */
 
-const getBackendUrl = (): string => {
-  // In dev mode, Vite proxy handles /api → backend, so use empty string (relative)
-  if (import.meta.env.DEV) return '';
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  if (backendUrl && backendUrl.startsWith('http')) return backendUrl;
-  return '';
-};
-
-export const BACKEND_URL = getBackendUrl();
-
-// Also export the full backend URL for auth (Better Auth needs the full URL)
-export const AUTH_BACKEND_URL = (() => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  if (backendUrl && backendUrl.startsWith('http')) return backendUrl;
-  return 'http://localhost:3000';
-})();
+// Always relative — browser never talks directly to the backend domain.
+export const BACKEND_URL = '';
 
 const REQUEST_TIMEOUT = 15000;
 

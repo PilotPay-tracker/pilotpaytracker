@@ -16,6 +16,12 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
 
+  useEffect(() => {
+    if (success) {
+      router.replace(redirectTo)
+    }
+  }, [success, redirectTo, router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -76,57 +82,12 @@ function LoginForm() {
             You&apos;re signed in!
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '15px', lineHeight: 1.6, margin: '0 0 32px' }}>
-            Where would you like to go?
+            Redirecting to dashboard...
           </p>
-
-          {/* Primary: Go to Dashboard */}
-          <a
-            href={redirectTo}
-            style={{
-              display: 'block',
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-              color: '#0f172a',
-              textDecoration: 'none',
-              borderRadius: '12px',
-              padding: '14px 32px',
-              fontSize: '15px',
-              fontWeight: '700',
-              marginBottom: '12px',
-              textAlign: 'center',
-            }}
-          >
-            Go to Dashboard →
-          </a>
-
-          {/* Secondary: Open mobile app */}
-          <a
-            href="pilotpaytracker://"
-            style={{
-              display: 'block',
-              background: 'rgba(255,255,255,0.05)',
-              color: '#e2e8f0',
-              textDecoration: 'none',
-              borderRadius: '12px',
-              padding: '14px 32px',
-              fontSize: '15px',
-              fontWeight: '600',
-              marginBottom: '12px',
-              border: '1px solid rgba(255,255,255,0.12)',
-              textAlign: 'center',
-            }}
-          >
-            Open Mobile App ✈️
-          </a>
-
-          <p style={{ color: '#475569', fontSize: '13px', marginTop: '8px' }}>
-            Don&apos;t have the app?{' '}
-            <a
-              href="https://apps.apple.com/app/pilot-pay-tracker/id6746883697"
-              style={{ color: '#f59e0b', textDecoration: 'none' }}
-            >
-              Download on the App Store
-            </a>
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: '2px solid #f59e0b', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </main>
     )

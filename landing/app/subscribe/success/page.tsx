@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000'
+// Use same-origin path — Next.js rewrite in next.config.js proxies /api/* to backend
+const BACKEND_URL = ''
 
 const REDIRECT_DELAY = 5 // seconds
 
@@ -136,7 +136,7 @@ export default function SubscribeSuccessPage() {
                 margin: '0 auto 24px',
               }}
             />
-            <p style={{ color: '#94a3b8', fontSize: '15px' }}>Confirming your subscription…</p>
+            <p style={{ color: '#94a3b8', fontSize: '15px' }}>Confirming your access…</p>
             <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
           </div>
         ) : (
@@ -192,7 +192,7 @@ export default function SubscribeSuccessPage() {
                 letterSpacing: '-0.5px',
               }}
             >
-              You&apos;re subscribed
+              Access Activated
             </h1>
 
             <p
@@ -203,7 +203,7 @@ export default function SubscribeSuccessPage() {
                 margin: '0 0 8px',
               }}
             >
-              Your Pilot Pay Tracker subscription is active.
+              Your Pilot Pay Tracker access is now active.
             </p>
 
             {/* Auto-redirect notice */}
@@ -223,7 +223,7 @@ export default function SubscribeSuccessPage() {
               }}
             >
               <p style={{ fontWeight: 600, fontSize: '14px', margin: '0 0 14px', color: '#e2e8f0' }}>
-                Your subscription includes
+                Your access includes
               </p>
               {[
                 'Unlimited Trip Board imports',
