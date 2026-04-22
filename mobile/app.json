@@ -1,12 +1,19 @@
 {
   "expo": {
     "name": "PilotPay Tracker",
-    "slug": "pilotpay-tracker",
+    "slug": "pilotpay-tracker-2r09iq",
+    "owner": "pilotorg",
     "scheme": "pilotpaytracker",
     "version": "1.0.2",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "icon": "./icon.png",
+    "extra": {
+      "eas": {
+        "projectId": "6a5b95f3-a691-44e1-8feb-93209d1c7119"
+      }
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.vibecode.pilotpaytracker.dpa2lr",
@@ -23,6 +30,17 @@
       }
     },
     "android": {
+      "package": "com.vibecode.pilotpaytracker.dpa2lr",
+      "versionCode": 64,
+      "adaptiveIcon": {
+        "foregroundImage": "./icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE"
+      ],
       "edgeToEdgeEnabled": true
     },
     "plugins": [
@@ -31,7 +49,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "icon": "./icon.png"
+    }
   }
 }

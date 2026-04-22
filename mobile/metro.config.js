@@ -40,11 +40,20 @@ config.transformer = {
   }),
 };
 
+// Helper: check if a .js counterpart exists for a .mjs path
+function mjsToJs(mjsPath) {
+  const jsPath = mjsPath.replace(/\.mjs$/, ".js");
+  try {
+    if (fs.existsSync(jsPath)) return jsPath;
+  } catch (_) {}
+  return null;
+}
+
 // Configure resolver with SVG support, shared folder resolution, and web platform mocking
 config.resolver = {
   ...config.resolver,
   assetExts: assetExts.filter((ext) => ext !== "svg"),
-  sourceExts: [...sourceExts, "svg"],
+  sourceExts: [...sourceExts, "svg", "mjs"],
   useWatchman: false,
   // Only add shared folder resolution if it exists
   // NOTE: unstable_enablePackageExports moved inside conditional - it breaks dynamic imports
@@ -60,6 +69,9 @@ config.resolver = {
       path.resolve(__dirname, "../backend/node_modules"),
     ],
   }),
+  // Override package exports for packages that ship broken ESM-only exports
+  // that Metro cannot handle. Maps package name -> exports field override.
+  unstable_conditionNames: ["require", "default"],
   resolveRequest: (context, moduleName, platform) => {
     // Handle @/shared/* imports explicitly
     // This is needed because:
@@ -92,11 +104,48 @@ config.resolver = {
       }
     }
 
+    // Fix @better-auth/expo/client - package exports point to .mjs which Metro can't resolve.
+    // Directly map to the .js file in dist/.
+    if (moduleName === "@better-auth/expo/client") {
+      const clientJs = path.resolve(
+        __dirname,
+        "node_modules/@better-auth/expo/dist/client.js"
+      );
+      console.log(`[Metro Resolve] @better-auth/expo/client -> ${clientJs}`);
+      return {
+        filePath: clientJs,
+        type: "sourceFile",
+      };
+    }
+
+    // Fix @better-auth/expo/* subpath exports that resolve to .mjs
+    // Catch any subpath like @better-auth/expo/something
+    if (moduleName.startsWith("@better-auth/expo/")) {
+      const subpath = moduleName.slice("@better-auth/expo/".length);
+      const jsPath = path.resolve(
+        __dirname,
+        `node_modules/@better-auth/expo/dist/${subpath}.js`
+      );
+      if (fs.existsSync(jsPath)) {
+        console.log(`[Metro Resolve] ${moduleName} -> ${jsPath}`);
+        return { filePath: jsPath, type: "sourceFile" };
+      }
+    }
+
     // Fix better-auth ESM resolution: Metro resolves to .cjs but package only ships .mjs
     // Intercept .cjs paths and redirect to .mjs
     if (moduleName.includes("better-auth") && moduleName.endsWith(".cjs")) {
       const mjsPath = moduleName.replace(/\.cjs$/, ".mjs");
       return context.resolveRequest(context, mjsPath, platform);
+    }
+
+    // Fix any .mjs file that Metro refuses to load - redirect to .js equivalent if it exists
+    if (moduleName.endsWith(".mjs")) {
+      const jsEquivalent = mjsToJs(moduleName);
+      if (jsEquivalent) {
+        console.log(`[Metro Resolve] .mjs -> .js: ${moduleName} -> ${jsEquivalent}`);
+        return { filePath: jsEquivalent, type: "sourceFile" };
+      }
     }
 
     // Fix @better-auth/expo incorrectly importing metro-config (dev-time only)
