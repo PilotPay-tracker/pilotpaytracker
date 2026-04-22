@@ -20,6 +20,9 @@
     "strict": true,
     "target": "ESNext",
     "paths": {
+      "@better-auth/expo/dist/client.js": [
+        "./node_modules/@better-auth/expo/dist/client.js"
+      ],
       "@/shared/*": [
         "../shared/*"
       ],

@@ -1,4 +1,4 @@
-import { expoClient } from "@better-auth/expo/client";
+import { expoClient } from "@better-auth/expo/dist/client.js";
 import { createAuthClient } from "better-auth/react";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
