@@ -10,11 +10,11 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "eas-build:pre-install": "node scripts/copy-shared.js",
-    "postinstall": "node scripts/fix-menu-kotlin.js"
+    "eas-build:post-install": "node scripts/fix-menu-kotlin.js"
   },
   "dependencies": {
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
-    "@better-auth/expo": "^1.6.7",
+    "@better-auth/expo": "1.6.7",
     "@bottom-tabs/react-navigation": "^0.12.2",
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
@@ -31,7 +31,7 @@
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-community/slider": "4.5.6",
     "@react-native-masked-view/masked-view": "0.3.2",
-    "@react-native-menu/menu": "^2.0.0",
+    "@react-native-menu/menu": "2.0.0",
     "@react-native-picker/picker": "2.11.1",
     "@react-native-segmented-control/segmented-control": "2.5.7",
     "@react-navigation/bottom-tabs": "7.3.10",
@@ -181,8 +181,7 @@
   "patchedDependencies": {
     "react-native@0.79.6": "patches/react-native@0.79.6.patch",
     "expo-asset@11.1.5": "patches/expo-asset@11.1.5.patch",
-    "@better-auth/expo@1.6.7": "patches/@better-auth%2Fexpo@1.6.7.patch",
-    "@react-native-menu/menu@2.0.0": "patches/@react-native-menu+menu@2.0.0.patch"
+    "@better-auth/expo@1.6.7": "patches/@better-auth%2Fexpo@1.6.7.patch"
   },
   "expo": {
     "install": {
@@ -199,7 +198,8 @@
         "@react-navigation/bottom-tabs",
         "@react-navigation/native",
         "@react-navigation/native-stack",
-        "@react-navigation/drawer"
+        "@react-navigation/drawer",
+        "@react-native-menu/menu"
       ]
     }
   }
