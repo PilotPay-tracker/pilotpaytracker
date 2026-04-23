@@ -1,0 +1,35 @@
+﻿diff --git a/android/src/main/java/com/reactnativemenu/MenuView.kt b/android/src/main/java/com/reactnativemenu/MenuView.kt
+index 1234567..abcdefg 100644
+--- a/android/src/main/java/com/reactnativemenu/MenuView.kt
++++ b/android/src/main/java/com/reactnativemenu/MenuView.kt
+@@ -25,7 +25,7 @@ class MenuView(context: Context) : FrameLayout(context) {
+   var onMenuItemClick: ((MenuItem) -> Unit)? = null
+   var onMenuShow: (() -> Unit)? = null
+   var onMenuHide: (() -> Unit)? = null
+-  val menuItems: WritableArray = WritableNativeArray()
++  var menuItems: WritableArray = WritableNativeArray()
+diff --git a/android/src/main/java/com/reactnativemenu/MenuViewManagerBase.kt b/android/src/main/java/com/reactnativemenu/MenuViewManagerBase.kt
+index 1234567..abcdefg 100644
+--- a/android/src/main/java/com/reactnativemenu/MenuViewManagerBase.kt
++++ b/android/src/main/java/com/reactnativemenu/MenuViewManagerBase.kt
+@@ -123,9 +123,9 @@ abstract class MenuViewManagerBase<T : MenuView> : ViewGroupManager<T>() {
+     view.menuItems = WritableNativeArray()
+     if (items != null) {
+       for (i in 0 until items.size()) {
+-        val item = items.getMap(i)
++        var item = items.getMap(i)
+         view.menuItems.pushMap(item)
+-        val subactions = item?.getArray("subactions")
++        var subactions = item?.getArray("subactions")
+         if (subactions != null) {
+           for (j in 0 until subactions.size()) {
+             view.menuItems.pushMap(subactions.getMap(j))
+@@ -206,7 +206,7 @@ abstract class MenuViewManagerBase<T : MenuView> : ViewGroupManager<T>() {
+   override fun receiveCommand(view: T, commandId: String?, args: ReadableArray?) {
+     super.receiveCommand(view, commandId, args)
+     if (commandId == COMMAND_SHOW.toString()) {
+-      val params = args?.getMap(0)
++      var params = args?.getMap(0)
+       view.showMenu(params)
+     }
+   }

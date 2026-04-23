@@ -180,7 +180,8 @@
   "patchedDependencies": {
     "react-native@0.79.6": "patches/react-native@0.79.6.patch",
     "expo-asset@11.1.5": "patches/expo-asset@11.1.5.patch",
-    "@better-auth/expo@1.6.7": "patches/@better-auth%2Fexpo@1.6.7.patch"
+    "@better-auth/expo@1.6.7": "patches/@better-auth%2Fexpo@1.6.7.patch",
+    "@react-native-menu/menu@2.0.0": "patches/@react-native-menu+menu@2.0.0.patch"
   },
   "expo": {
     "install": {
