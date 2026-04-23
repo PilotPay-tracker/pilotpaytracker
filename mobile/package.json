@@ -172,6 +172,9 @@
     "framer-motion": {
       "react": "*",
       "react-dom": "*"
+    },
+    "zeego": {
+      "@react-native-menu/menu": "2.0.0"
     }
   },
   "patchedDependencies": {
