@@ -9,8 +9,8 @@
     "web": "DARK_MODE=class expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "eas-build:pre-install": "node scripts/copy-shared.js",
-    "eas-build:post-install": "node scripts/fix-menu-kotlin.js"
+    "eas-build:pre-install": "node scripts/copy-shared.js && mkdir -p node_modules/@react-native-menu/menu/android/src/main/java/com/reactnativemenu && cp mobile_patches/@react-native-menu/menu/android/src/main/java/com/reactnativemenu/MenuView.kt node_modules/@react-native-menu/menu/android/src/main/java/com/reactnativemenu/MenuView.kt && cp mobile_patches/@react-native-menu/menu/android/src/main/java/com/reactnativemenu/MenuViewManagerBase.kt node_modules/@react-native-menu/menu/android/src/main/java/com/reactnativemenu/MenuViewManagerBase.kt || true",
+    "eas-build:post-install": "cp mobile_patches/@react-native-menu/menu/android/src/main/java/com/reactnativemenu/MenuView.kt node_modules/@react-native-menu/menu/android/src/main/java/com/reactnativemenu/MenuView.kt && cp mobile_patches/@react-native-menu/menu/android/src/main/java/com/reactnativemenu/MenuViewManagerBase.kt node_modules/@react-native-menu/menu/android/src/main/java/com/reactnativemenu/MenuViewManagerBase.kt"
   },
   "dependencies": {
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
