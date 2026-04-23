@@ -27,7 +27,7 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav({ colorScheme }: { colorScheme: 'light' | 'dark' | null | undefined }) {
   // Start the global sync manager — drains queued offline operations when back online
-  useSyncManager();
+  // useSyncManager();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -154,12 +154,19 @@ export default function RootLayout() {
   const [isAppReady, setIsAppReady] = useState(false);
 
   useEffect(() => {
-    clearSessionOnVersionChange().finally(() => setIsAppReady(true));
+    clearSessionOnVersionChange()
+      .finally(() => {
+        setIsAppReady(true);
+        SplashScreen.hideAsync(); // ✅ ADD THIS
+      });
+
     initAnalytics();
   }, []);
 
   // Keep splash screen visible until version check + auth state are resolved
-  if (!isAppReady) return null;
+  if (!isAppReady) {
+    return <GestureHandlerRootView style={{ flex: 1 }} />;
+  }
 
   return (
     <ErrorBoundary>

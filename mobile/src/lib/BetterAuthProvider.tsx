@@ -61,11 +61,11 @@ const AuthContext = createContext<AuthContextType>({
   profileError: null,
   signUp: async () => ({ error: null }),
   signIn: async () => ({ error: null }),
-  signOut: async () => {},
-  requestSignOutForSwitch: async () => {},
+  signOut: async () => { },
+  requestSignOutForSwitch: async () => { },
   resetPassword: async () => ({ error: null }),
   updatePassword: async () => ({ error: null }),
-  retryProfileLoad: async () => {},
+  retryProfileLoad: async () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -278,7 +278,7 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
   useEffect(() => {
     const authResolved = !isAuthenticated || profileError != null || isProfileReady;
     if (!isLoading && isFirstNavDone && authResolved) {
-      SplashScreen.hideAsync().catch(() => {});
+      SplashScreen.hideAsync().catch(() => { });
     }
   }, [isLoading, isFirstNavDone, isAuthenticated, profileError, isProfileReady]);
 
@@ -333,7 +333,7 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
           AUTH_TIMEOUT_MS,
         );
 
-        const { error } = result;
+        const { error } = result as any;
 
         if (!error) {
           // On web, persist the session token for use in API calls
@@ -356,8 +356,8 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
           normalized.status === 504 ||
           (normalized.status === undefined &&
             (normalized.message.toLowerCase().includes("fetch") ||
-             normalized.message.toLowerCase().includes("network") ||
-             normalized.message.toLowerCase().includes("timeout")));
+              normalized.message.toLowerCase().includes("network") ||
+              normalized.message.toLowerCase().includes("timeout")));
 
         if (isTransient && attempt < MAX_RETRIES) {
           console.log(`[BetterAuth][SIGNUP] Transient error (${normalized.status}), will retry...`);
@@ -379,8 +379,8 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
           normalized.status === 504 ||
           (normalized.status === undefined &&
             (normalized.message.toLowerCase().includes("fetch") ||
-             normalized.message.toLowerCase().includes("network") ||
-             normalized.message.toLowerCase().includes("timeout")));
+              normalized.message.toLowerCase().includes("network") ||
+              normalized.message.toLowerCase().includes("timeout")));
 
         if (isTransient && attempt < MAX_RETRIES) {
           console.log(`[BetterAuth][SIGNUP] Transient exception (${normalized.status}), will retry...`);
@@ -469,7 +469,7 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
           AUTH_TIMEOUT_MS,
         );
 
-        const { error } = result;
+        const { error } = result as any;
 
         if (!error) {
           // On web, persist the session token for use in API calls (bypasses cross-origin cookie issues)
@@ -502,8 +502,8 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
           normalized.status === 504 ||
           (normalized.status === undefined &&
             (normalized.message.toLowerCase().includes("fetch") ||
-             normalized.message.toLowerCase().includes("network") ||
-             normalized.message.toLowerCase().includes("timeout")));
+              normalized.message.toLowerCase().includes("network") ||
+              normalized.message.toLowerCase().includes("timeout")));
 
         if (isTransient && attempt < MAX_RETRIES) {
           console.log(`[BetterAuth][SIGNIN] Transient error (${normalized.status}), will retry...`);
@@ -529,8 +529,8 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
           normalized.status === 504 ||
           (normalized.status === undefined &&
             (normalized.message.toLowerCase().includes("fetch") ||
-             normalized.message.toLowerCase().includes("network") ||
-             normalized.message.toLowerCase().includes("timeout")));
+              normalized.message.toLowerCase().includes("network") ||
+              normalized.message.toLowerCase().includes("timeout")));
 
         if (isTransient && attempt < MAX_RETRIES) {
           console.log(`[BetterAuth][SIGNIN] Transient exception (${normalized.status}), will retry...`);
@@ -589,7 +589,7 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
     }
     // Log out of RevenueCat to clear the linked user
     if (isRevenueCatEnabled()) {
-      logoutUser().catch(() => {});
+      logoutUser().catch(() => { });
     }
     clearProfile();
     setIsProfileReady(false);
@@ -607,13 +607,13 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
   const requestSignOutForSwitch = useCallback(async () => {
     console.log("[BetterAuth] Signing out for account switch");
     skipNavRedirectRef.current = true;
-    await authClient.signOut().catch(() => {});
+    await authClient.signOut().catch(() => { });
     // Clear web session token on sign out
     if (Platform.OS === "web") {
       clearWebSessionToken();
     }
     if (isRevenueCatEnabled()) {
-      logoutUser().catch(() => {});
+      logoutUser().catch(() => { });
     }
     clearProfile();
     setIsProfileReady(false);
@@ -788,13 +788,13 @@ export function AuthProvider({ children, appReady }: AuthProviderProps) {
       {children}
       {(!isFirstNavDone ||
         (appReady && isAuthenticated && !profileError && !isProfileReady)) && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#f59e0b" />
-          {appReady && isAuthenticated && !isProfileReady && !profileError && (
-            <Text style={styles.loadingText}>Setting up your account...</Text>
-          )}
-        </View>
-      )}
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#f59e0b" />
+            {appReady && isAuthenticated && !isProfileReady && !profileError && (
+              <Text style={styles.loadingText}>Setting up your account...</Text>
+            )}
+          </View>
+        )}
     </AuthContext.Provider>
   );
 }
