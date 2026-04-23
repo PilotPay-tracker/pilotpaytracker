@@ -31,7 +31,7 @@
     },
     "android": {
       "package": "com.vibecode.pilotpaytracker.dpa2lr",
-      "versionCode": 64,
+      "versionCode": 65,
       "adaptiveIcon": {
         "foregroundImage": "./icon.png",
         "backgroundColor": "#ffffff"
