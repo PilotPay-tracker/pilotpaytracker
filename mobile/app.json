@@ -41,7 +41,10 @@
         "RECORD_AUDIO",
         "READ_EXTERNAL_STORAGE"
       ],
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "blockedNativeModules": [
+        "@react-native-menu/menu"
+      ]
     },
     "plugins": [
       "expo-router",
