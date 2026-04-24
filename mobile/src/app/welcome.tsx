@@ -5,7 +5,7 @@
  * - Create Account, Sign In buttons
  */
 
-import { View, Text, Pressable, Linking } from "react-native";
+import { View, Text, Pressable, Linking, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -26,7 +26,6 @@ export default function WelcomeScreen() {
   const handleLogoTap = () => {
     const now = Date.now();
     if (now - lastTapRef.current > 2000) {
-      // Reset if more than 2 seconds since last tap
       tapCountRef.current = 0;
     }
     lastTapRef.current = now;
@@ -57,9 +56,15 @@ export default function WelcomeScreen() {
         end={{ x: 1, y: 1 }}
         style={{ flex: 1 }}
       >
-        <View
-          className="flex-1 px-6"
-          style={{ paddingTop: insets.top + 60, paddingBottom: insets.bottom + 20 }}
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: 24,
+            paddingTop: insets.top + 60,
+            paddingBottom: insets.bottom + 20,
+          }}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
         >
           {/* Logo & Title */}
           <Animated.View
@@ -148,7 +153,7 @@ export default function WelcomeScreen() {
           </Animated.View>
 
           {/* Spacer */}
-          <View className="flex-1" />
+          <View style={{ minHeight: 24, flexGrow: 1 }} />
 
           {/* Buttons */}
           <Animated.View entering={FadeInUp.duration(700).delay(500)}>
@@ -190,7 +195,7 @@ export default function WelcomeScreen() {
               .
             </Text>
           </Animated.View>
-        </View>
+        </ScrollView>
       </LinearGradient>
     </View>
   );

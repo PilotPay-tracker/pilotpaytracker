@@ -2,9 +2,9 @@
   "expo": {
     "name": "PilotPay Tracker",
     "slug": "pilotpay-tracker-2r09iq",
-    "owner": "pilotorg",
+    "owner": "pilotpayorg",
     "scheme": "pilotpaytracker",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -31,7 +31,7 @@
     },
     "android": {
       "package": "com.vibecode.pilotpaytracker.dpa2lr",
-      "versionCode": 65,
+      "versionCode": 67,
       "adaptiveIcon": {
         "foregroundImage": "./icon.png",
         "backgroundColor": "#ffffff"
